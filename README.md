@@ -40,10 +40,11 @@ O sistema é construído sobre uma base tecnológica robusta e escalável:
 
 ## 🛡️ Requisitos de Qualidade e Performance
 
-Desempenho (RNF005): Tempo máximo de resposta de 200ms para operações comuns.
+- Desempenho (RNF005): Tempo máximo de resposta de 200ms para operações comuns.
 
-Segurança (RNF003): Credenciais protegidas por hash criptográfico e conformidade com a LGPD.
+- Segurança (RNF003): Credenciais protegidas por hash criptográfico e conformidade com a LGPD.
 
+- Confiabilidade: Realização de backups automáticos e integridade de dados garantida por testes automatizados.
 ## 👥 Colaboradores
 
 <table>
@@ -58,5 +59,3 @@ Segurança (RNF003): Credenciais protegidas por hash criptográfico e conformida
     <td align="center"><a href="https://github.com/Yohanna-Araujo"><img src="https://github.com/Yohanna-Araujo.png" width="100px;" alt=""/><br /><sub><b>Yohanna Silva</b></sub></a><br /></td>
   </tr>
 </table>
-
-Confiabilidade: Realização de backups automáticos e integridade de dados garantida por testes automatizados.
