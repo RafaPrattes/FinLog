@@ -1,5 +1,5 @@
 ## FinLog - Gestão Financeira Inteligente 💰
-O FinLog é um sistema de controlo financeiro desenvolvido para auxiliar utilizadores no gerenciamento eficiente de suas receitas e despesas. A aplicação oferece uma visão clara e organizada do comportamento financeiro, facilitando o planeamento e o alcance de metas pessoais.
+O FinLog é um sistema de controle financeiro desenvolvido para auxiliar utilizadores no gerenciamento eficiente de suas receitas e despesas. A aplicação oferece uma visão clara e organizada do comportamento financeiro, facilitando o planejamento e o alcance de metas pessoais.
 
 ## 🏗️ Representação Arquitetural
 O projeto adota o modelo de Arquitetura 4+1 de Philippe Kruchten , organizando a documentação em múltiplas visões complementares:
