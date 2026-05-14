@@ -22,22 +22,12 @@ let _uid = 50
 const uid = () => ++_uid
 
 /* ══════════════════════════════
-   DADOS INICIAIS (demo)
+   DADOS
+   TODO: substituir pelos retornos da API (axios.get)
+   Exemplo futuro:
+     const { data } = await axios.get('/api/transacoes')
+     setTxns(data)
 ══════════════════════════════ */
-const INITIAL_TXNS = [
-  { id: 1, type: 'saida',   desc: 'Saída',   val: 500,  date: '2026-05-01', cat: 'Outros'  },
-  { id: 2, type: 'saida',   desc: 'Saída',   val: 500,  date: '2026-05-02', cat: 'Outros'  },
-  { id: 3, type: 'saida',   desc: 'Saída',   val: 400,  date: '2026-05-03', cat: 'Outros'  },
-  { id: 4, type: 'saida',   desc: 'Saída',   val: 4000, date: '2026-05-04', cat: 'Outros'  },
-  { id: 5, type: 'entrada', desc: 'Entrada', val: 500,  date: '2026-05-05', cat: 'Salário' },
-  { id: 6, type: 'entrada', desc: 'Entrada', val: 500,  date: '2026-05-06', cat: 'Salário' },
-]
-
-const INITIAL_METAS = [
-  { id: 1, desc: 'Entrada para a casa própria', val: 1000 },
-  { id: 2, desc: 'Entrada para a casa própria', val: 1000 },
-  { id: 3, desc: 'Entrada para a casa própria', val: 1000 },
-]
 
 /* ══════════════════════════════
    DONUT CHART (SVG puro, sem lib)
@@ -95,8 +85,8 @@ function DonutChart({ entTotal, saiTotal }) {
 ══════════════════════════════ */
 function Dashboard({ user, onLogout }) {
   /* ─── Estado principal ─── */
-  const [txns,       setTxns]       = useState(INITIAL_TXNS)
-  const [metas,      setMetas]      = useState(INITIAL_METAS)
+  const [txns,       setTxns]       = useState([]) // TODO: carregar da API
+  const [metas,      setMetas]      = useState([]) // TODO: carregar da API
   const [editModeOn, setEditModeOn] = useState(false)
 
   /* ─── Filtros extrato ─── */

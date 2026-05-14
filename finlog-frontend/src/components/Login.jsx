@@ -1,10 +1,5 @@
 import { useState } from 'react'
 
-/* Usuários demo — futuramente virão do backend */
-const USERS = [
-  { name: 'Serena Gilmore', email: 'serena@finlog.com', password: '123456' },
-]
-
 function Login({ goToRegister, onLogin }) {
   const [userInput, setUserInput] = useState('')
   const [password,  setPassword]  = useState('')
@@ -12,7 +7,7 @@ function Login({ goToRegister, onLogin }) {
   const [userErr,   setUserErr]   = useState(false)
   const [passErr,   setPassErr]   = useState(false)
 
-  function handleLogin() {
+  async function handleLogin() {
     setError('')
     setUserErr(false)
     setPassErr(false)
@@ -27,19 +22,22 @@ function Login({ goToRegister, onLogin }) {
       return
     }
 
-    const found = USERS.find(x =>
-      (x.email === u || x.name === u || x.email.split('@')[0] === u) &&
-      x.password === p
-    )
-
-    if (!found) {
-      setError('Usuário ou senha inválidos.')
-      setUserErr(true)
-      setPassErr(true)
-      return
-    }
-
-    onLogin(found)
+    /*
+     * TODO: integração com a API
+     * Substituir o bloco abaixo por:
+     *
+     * try {
+     *   const { data } = await axios.post('/api/auth/login', { email: u, password: p })
+     *   onLogin(data.user) // ou data conforme o retorno do backend
+     * } catch (err) {
+     *   setError('Usuário ou senha inválidos.')
+     *   setUserErr(true)
+     *   setPassErr(true)
+     * }
+     */
+    setError('Autenticação com backend ainda não implementada.')
+    setUserErr(true)
+    setPassErr(true)
   }
 
   function handleKeyDown(e) {
@@ -87,9 +85,7 @@ function Login({ goToRegister, onLogin }) {
           Não tem cadastro? Clique aqui
         </button>
 
-        <div className="demo-hint">
-          Conta demo: <b>serena@finlog.com</b> · senha: <b>123456</b>
-        </div>
+        {/* TODO: remover após integração com backend */}
       </div>
     </div>
   )
