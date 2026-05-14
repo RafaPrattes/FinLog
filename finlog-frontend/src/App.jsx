@@ -1,18 +1,29 @@
 import { useState } from 'react'
 
-import Login from './components/Login'
+import Login    from './components/Login'
 import Register from './components/Register'
 import Dashboard from './components/Dashboard'
 
 function App() {
-  const [screen, setScreen] = useState('login')
+  const [screen,      setScreen]      = useState('login')
+  const [currentUser, setCurrentUser] = useState(null)
+
+  function handleLogin(user) {
+    setCurrentUser(user)
+    setScreen('dashboard')
+  }
+
+  function handleLogout() {
+    setCurrentUser(null)
+    setScreen('login')
+  }
 
   return (
     <>
       {screen === 'login' && (
         <Login
           goToRegister={() => setScreen('register')}
-          goToDashboard={() => setScreen('dashboard')}
+          onLogin={handleLogin}
         />
       )}
 
@@ -23,7 +34,10 @@ function App() {
       )}
 
       {screen === 'dashboard' && (
-        <Dashboard />
+        <Dashboard
+          user={currentUser}
+          onLogout={handleLogout}
+        />
       )}
     </>
   )
