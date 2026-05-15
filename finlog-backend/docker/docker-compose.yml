@@ -1,0 +1,17 @@
+services:
+  mysql-db:
+    image: mysql:latest
+    container_name: mysql_finlog
+    restart: always
+    env_file:
+      - ../.env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_finlog:/var/lib/mysql
+
+volumes:
+  mysql_finlog:
+
+# docker compose up -d
+# docker compose down
