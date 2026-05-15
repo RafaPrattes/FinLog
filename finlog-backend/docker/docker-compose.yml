@@ -4,7 +4,7 @@ services:
     container_name: mysql_finlog
     restart: always
     env_file:
-      - ../.env
+      - .env
     ports:
       - "3306:3306"
     volumes:
