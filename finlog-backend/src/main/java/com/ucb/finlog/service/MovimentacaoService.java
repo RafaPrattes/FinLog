@@ -26,7 +26,7 @@ public class MovimentacaoService {
 
     public Movimentacao salvar(Movimentacao movimentacao, String emailUsuario) {
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario nao encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
         movimentacao.setUsuario(usuario);
         return repository.save(movimentacao);
@@ -34,6 +34,6 @@ public class MovimentacaoService {
 
     public Movimentacao buscarPorId(Long id, String emailUsuario) {
         return repository.findByIdAndUsuarioEmail(id, emailUsuario)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Movimentacao nao encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Movimentação não encontrada"));
     }
 }
