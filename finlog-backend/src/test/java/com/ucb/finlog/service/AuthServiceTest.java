@@ -15,6 +15,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import org.springframework.web.server.ResponseStatusException;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,5 +53,44 @@ class AuthServiceTest {
         assertEquals("Bearer", response.tipo());
         assertEquals(3600L, response.expiraEmSegundos());
         assertEquals("maria@email.com", response.usuario().email());
+    }
+
+    @Test
+    void deveRejeitarLoginSemDadosObrigatorios() {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.login(null));
+
+        assertEquals(400, exception.getStatusCode().value());
+        assertEquals("E-mail e senha são obrigatórios", exception.getReason());
+    }
+
+    @Test
+    void deveRejeitarCredenciaisInvalidas() {
+        when(usuarioRepository.findByEmail("maria@email.com")).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.login(new LoginRequest("maria@email.com", "123456"))
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+        assertEquals("Credenciais inválidas", exception.getReason());
+    }
+
+    @Test
+    void deveRejeitarSenhaIncorreta() {
+        Usuario usuario = new Usuario();
+        usuario.setEmail("maria@email.com");
+        usuario.setSenha("senha-com-hash");
+
+        when(usuarioRepository.findByEmail("maria@email.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha-errada", "senha-com-hash")).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.login(new LoginRequest("maria@email.com", "senha-errada"))
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+        assertEquals("Credenciais inválidas", exception.getReason());
     }
 }
