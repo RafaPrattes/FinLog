@@ -1,0 +1,46 @@
+services:
+  finlog-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      FINLOG_DB_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE:-finlog_db}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      FINLOG_DB_USERNAME: ${FINLOG_DB_USERNAME:-finlog}
+      FINLOG_DB_PASSWORD: ${FINLOG_DB_PASSWORD:-finlog}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL:-false}
+      APP_AUTH_TOKEN_SECRET: ${APP_AUTH_TOKEN_SECRET:-change-me-to-a-long-random-secret}
+      APP_AUTH_TOKEN_EXPIRATION_SECONDS: ${APP_AUTH_TOKEN_EXPIRATION_SECONDS:-3600}
+    ports:
+      - "${FINLOG_BACKEND_PORT:-8083}:8080"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+
+  mysql-db:
+    image: mysql:9.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-finlog_db}
+      MYSQL_USER: ${MYSQL_USER:-finlog}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-finlog}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - mysql_finlog:/var/lib/mysql
+
+volumes:
+  mysql_finlog:
+
+# docker compose up -d
+# docker compose down

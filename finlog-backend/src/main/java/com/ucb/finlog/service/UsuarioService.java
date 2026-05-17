@@ -1,52 +1,68 @@
 package com.ucb.finlog.service;
 
+import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Optional;
+import java.util.List;
 
 @Service
 public class UsuarioService {
+    private final UsuarioRepository repository;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    /**
-     * Cadastra um novo usuário.
-     * Lança IllegalArgumentException se o e-mail já estiver em uso.
-     */
-    public Usuario cadastrar(Usuario usuario) {
-        if (usuarioRepository.existsByEmail(usuario.getEmail())) {
-            throw new IllegalArgumentException("E-mail já cadastrado.");
-        }
-        // TODO: aplicar hash na senha antes de salvar (ex: BCrypt)
-        // usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
-        return usuarioRepository.save(usuario);
+    public UsuarioService(UsuarioRepository repository, PasswordEncoder passwordEncoder) {
+        this.repository = repository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Autentica um usuário por e-mail e senha.
-     * Retorna o usuário se as credenciais forem válidas.
-     * Lança IllegalArgumentException se inválidas.
-     */
-    public Usuario login(String email, String senha) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+    public Usuario cadastrar(CadastroUsuarioRequest request) {
+        validarCadastro(request);
 
-        if (opt.isEmpty()) {
-            throw new IllegalArgumentException("Usuário ou senha inválidos.");
+        String email = request.email().trim().toLowerCase();
+        if (repository.existsByEmail(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
         }
 
-        Usuario usuario = opt.get();
+        Usuario usuario = new Usuario();
+        usuario.setNome(request.nome().trim());
+        usuario.setEmail(email);
+        usuario.setSenha(passwordEncoder.encode(request.senha()));
+        return repository.save(usuario);
+    }
 
-        // TODO: comparar com hash (ex: passwordEncoder.matches(senha, usuario.getSenha()))
-        if (!usuario.getSenha().equals(senha)) {
-            throw new IllegalArgumentException("Usuário ou senha inválidos.");
+    public Usuario buscarPorEmail(String email) {
+        return repository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+    }
+
+    public List<Usuario> listarTodos() {
+        return repository.findAll();
+    }
+
+    private void validarCadastro(CadastroUsuarioRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome, e-mail e senha são obrigatórios");
         }
 
-        // Remove a senha do objeto antes de retornar
-        usuario.setSenha(null);
-        return usuario;
+        if (isBlank(request.nome()) || isBlank(request.email()) || isBlank(request.senha())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome, e-mail e senha são obrigatórios");
+        }
+
+        if (!request.email().contains("@")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail inválido");
+        }
+
+        if (request.senha().length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A senha deve ter pelo menos 6 caracteres");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

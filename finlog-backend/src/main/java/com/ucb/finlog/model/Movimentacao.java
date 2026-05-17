@@ -10,7 +10,6 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "movimentacoes")
 public class Movimentacao {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,15 +23,10 @@ public class Movimentacao {
     private LocalDate data;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private TipoMovimentacao tipo;
+    private TipoMovimentacao tipo; // Crie um Enum com RECEITA, DESPESA
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "usuario_id")
+    @JsonIgnore
     private Usuario usuario;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "categoria_id")
-    private Categoria categoria;
 }
