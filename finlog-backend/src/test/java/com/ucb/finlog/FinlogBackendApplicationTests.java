@@ -7,6 +7,9 @@ import org.springframework.boot.SpringApplication;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mockStatic;
 
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 class FinlogBackendApplicationTests {
 
 	@Test
