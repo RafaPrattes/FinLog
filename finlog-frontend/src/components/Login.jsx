@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import api from '../service/api'
 
 function Login({ goToRegister, onLogin }) {
   const [userInput, setUserInput] = useState('')
@@ -6,6 +7,7 @@ function Login({ goToRegister, onLogin }) {
   const [error,     setError]     = useState('')
   const [userErr,   setUserErr]   = useState(false)
   const [passErr,   setPassErr]   = useState(false)
+  const [loading,   setLoading]   = useState(false)
 
   async function handleLogin() {
     setError('')
@@ -22,22 +24,17 @@ function Login({ goToRegister, onLogin }) {
       return
     }
 
-    /*
-     * TODO: integração com a API
-     * Substituir o bloco abaixo por:
-     *
-     * try {
-     *   const { data } = await axios.post('/api/auth/login', { email: u, password: p })
-     *   onLogin(data.user) // ou data conforme o retorno do backend
-     * } catch (err) {
-     *   setError('Usuário ou senha inválidos.')
-     *   setUserErr(true)
-     *   setPassErr(true)
-     * }
-     */
-    setError('Autenticação com backend ainda não implementada.')
-    setUserErr(true)
-    setPassErr(true)
+    try {
+      setLoading(true)
+      const { data } = await api.post('/auth/login', { email: u, senha: p })
+      onLogin(data)
+    } catch (err) {
+      setError('Usuário ou senha inválidos.')
+      setUserErr(true)
+      setPassErr(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleKeyDown(e) {
@@ -62,7 +59,6 @@ function Login({ goToRegister, onLogin }) {
           onChange={e => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-
         <input
           type="password"
           className={`field${passErr ? ' err' : ''}`}
@@ -77,15 +73,13 @@ function Login({ goToRegister, onLogin }) {
           <label htmlFor="remember">Permanecer Conectado</label>
         </div>
 
-        <button className="btn-main" onClick={handleLogin}>
-          Login
+        <button className="btn-main" onClick={handleLogin} disabled={loading}>
+          {loading ? 'Entrando…' : 'Login'}
         </button>
 
         <button className="link-btn" onClick={goToRegister}>
           Não tem cadastro? Clique aqui
         </button>
-
-        {/* TODO: remover após integração com backend */}
       </div>
     </div>
   )

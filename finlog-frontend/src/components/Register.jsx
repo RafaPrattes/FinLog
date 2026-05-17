@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import api from '../service/api'
 
 function Register({ goToLogin }) {
   const [name,            setName]            = useState('')
@@ -7,15 +8,16 @@ function Register({ goToLogin }) {
   const [password,        setPassword]        = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error,           setError]           = useState('')
+  const [loading,         setLoading]         = useState(false)
 
-  function handleRegister() {
+  async function handleRegister() {
     setError('')
 
-    const n  = name.trim()
-    const em = email.trim()
+    const n   = name.trim()
+    const em  = email.trim()
     const em2 = confirmEmail.trim()
-    const p  = password
-    const p2 = confirmPassword
+    const p   = password
+    const p2  = confirmPassword
 
     if (!n || !em || !em2 || !p || !p2) {
       setError('Preencha todos os campos.')
@@ -34,8 +36,16 @@ function Register({ goToLogin }) {
       return
     }
 
-    /* Futuramente: chamar API de cadastro aqui */
-    goToLogin()
+    try {
+      setLoading(true)
+      await api.post('/usuarios', { nome: n, email: em, senha: p })
+      goToLogin()
+    } catch (err) {
+      const msg = err.response?.data || 'Erro ao cadastrar. Tente novamente.'
+      setError(typeof msg === 'string' ? msg : 'Erro ao cadastrar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -55,7 +65,6 @@ function Register({ goToLogin }) {
           value={name}
           onChange={e => setName(e.target.value)}
         />
-
         <input
           type="email"
           className="field"
@@ -63,7 +72,6 @@ function Register({ goToLogin }) {
           value={email}
           onChange={e => setEmail(e.target.value)}
         />
-
         <input
           type="email"
           className="field"
@@ -71,7 +79,6 @@ function Register({ goToLogin }) {
           value={confirmEmail}
           onChange={e => setConfirmEmail(e.target.value)}
         />
-
         <input
           type="password"
           className="field"
@@ -79,7 +86,6 @@ function Register({ goToLogin }) {
           value={password}
           onChange={e => setPassword(e.target.value)}
         />
-
         <input
           type="password"
           className="field"
@@ -88,8 +94,8 @@ function Register({ goToLogin }) {
           onChange={e => setConfirmPassword(e.target.value)}
         />
 
-        <button className="btn-main" onClick={handleRegister}>
-          Cadastrar
+        <button className="btn-main" onClick={handleRegister} disabled={loading}>
+          {loading ? 'Cadastrando…' : 'Cadastrar'}
         </button>
 
         <button className="link-btn" onClick={goToLogin}>
