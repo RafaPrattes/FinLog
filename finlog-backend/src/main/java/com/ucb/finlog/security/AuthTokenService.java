@@ -14,10 +14,10 @@ import java.util.Base64;
 public class AuthTokenService {
     private static final String HMAC_ALGORITHM = "HmacSHA256";
 
-    @Value("${app.auth.token-secret}")
+    @Value("${app.auth.token-secret:${APP_AUTH_TOKEN_SECRET:change-me-to-a-long-random-secret}}")
     private String tokenSecret;
 
-    @Value("${app.auth.token-expiration-seconds}")
+    @Value("${app.auth.token-expiration-seconds:${APP_AUTH_TOKEN_EXPIRATION_SECONDS:3600}}")
     private long expirationSeconds;
 
     public String gerarToken(Usuario usuario) {
