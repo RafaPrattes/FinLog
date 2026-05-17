@@ -64,6 +64,61 @@ function DonutChart({ entTotal, saiTotal }) {
 }
 
 /* ══════════════════════════════
+   CHATBOT
+   TODO: integrar com backend (/api/chat)
+══════════════════════════════ */
+function ChatBot({ user }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: `Olá${user?.nome ? ', ' + user.nome.split(' ')[0] : ''}! Sou seu assistente financeiro. Como posso te ajudar hoje?` }
+  ])
+  const [input,   setInput]   = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading) return
+    setMessages(prev => [...prev, { role: 'user', text }])
+    setInput('')
+    setLoading(true)
+    /* TODO: const { data } = await api.post('/chat', { message: text })
+             setMessages(prev => [...prev, { role: 'assistant', text: data.reply }]) */
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Em breve estarei conectado ao backend! 🚀' }])
+      setLoading(false)
+    }, 800)
+  }
+
+  return (
+    <div className="chat-wrap">
+      <h2 className="page-title">Assistente IA</h2>
+      <div className="chat-messages">
+        {messages.map((m, i) => (
+          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+        ))}
+        {loading && <div className="chat-bubble assistant chat-typing">digitando…</div>}
+        <div ref={bottomRef} />
+      </div>
+      <div className="chat-input-row">
+        <input
+          className="chat-input"
+          type="text"
+          placeholder="Digite sua pergunta…"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+        />
+        <button className="chat-send" onClick={send} disabled={loading}>Enviar</button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════
    DASHBOARD
 ══════════════════════════════ */
 function Dashboard({ user, onLogout }) {
@@ -71,6 +126,7 @@ function Dashboard({ user, onLogout }) {
   const [metas,      setMetas]      = useState([])
   const [editModeOn, setEditModeOn] = useState(false)
   const [loading,    setLoading]    = useState(true)
+  const [activeTab,  setActiveTab]  = useState('home')
 
   const [filterType, setFilterType] = useState('all')
   const [filterCat,  setFilterCat]  = useState('all')
@@ -101,7 +157,7 @@ function Dashboard({ user, onLogout }) {
           id:   m.id,
           type: m.tipo === 'RECEITA' ? 'entrada' : 'saida',
           desc: m.descricao,
-          val: parseFloat(m.valor) || 0,
+          val:  parseFloat(m.valor) || 0,
           date: m.data,
           cat:  m.categoria?.nome || 'Outros',
         }))
@@ -302,8 +358,23 @@ function Dashboard({ user, onLogout }) {
   return (
     <div id="screen-dashboard" className="screen active">
 
+      {/* ─── SIDEBAR ─── */}
       <aside className="sidebar">
-        <div className="sidebar-logo">FinLog</div>
+        <div className="sidebar-logo-box">FinLog</div>
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item${activeTab === 'home' ? ' active' : ''}`}
+            onClick={() => setActiveTab('home')}
+          >
+            🏠 Início
+          </button>
+          <button
+            className={`nav-item${activeTab === 'chat' ? ' active' : ''}`}
+            onClick={() => setActiveTab('chat')}
+          >
+            🤖 Assistente IA
+          </button>
+        </nav>
         <div className="sidebar-user" onClick={confirmLogout} title="Sair">
           <div className="avatar">{avatarText}</div>
           <div>
@@ -313,121 +384,138 @@ function Dashboard({ user, onLogout }) {
         </div>
       </aside>
 
+      {/* ─── MAIN ─── */}
       <main className="main">
-        <h2 className="page-title">Página Inicial</h2>
 
-        <div className="row row-top">
-          <div className="saldo-card">
-            <div className="saldo-arrow">↗</div>
-            <div className="saldo-lbl">Seu Saldo</div>
-            <div className={`saldo-val${saldo < 0 ? ' neg' : ''}`}>{brl(saldo)}</div>
-            <div className="saldo-btns">
-              <button className="saldo-btn" onClick={() => openLanc('entrada')}>Entrada +</button>
-              <button className="saldo-btn" onClick={() => openLanc('saida')}>Saída –</button>
-            </div>
-          </div>
+        {/* ABA: CHATBOT */}
+        {activeTab === 'chat' && <ChatBot user={user} />}
 
-          <div className="summary-card">
-            <div className="summary-nums">
-              <div className="s-row">
-                <div className="s-item">
-                  <label>Entradas</label>
-                  <div className="amt">{brl(entTotal)}</div>
-                </div>
-                <div className="s-item">
-                  <label>Saídas</label>
-                  <div className="amt">{brl(saiTotal)}</div>
+        {/* ABA: HOME */}
+        {activeTab === 'home' && (
+          <>
+            <h2 className="page-title">Página Inicial</h2>
+
+            {/* TOP ROW */}
+            <div className="row row-top">
+              <div className="saldo-card">
+                <div className="saldo-arrow">↗</div>
+                <div className="saldo-lbl">Seu Saldo</div>
+                <div className={`saldo-val${saldo < 0 ? ' neg' : ''}`}>{brl(saldo)}</div>
+                <div className="saldo-btns">
+                  <button className="saldo-btn" onClick={() => openLanc('entrada')}>Entrada +</button>
+                  <button className="saldo-btn" onClick={() => openLanc('saida')}>Saída –</button>
                 </div>
               </div>
-            </div>
-            <div className="donut-wrap">
-              <DonutChart entTotal={entTotal} saiTotal={saiTotal} />
-            </div>
-          </div>
-        </div>
 
-        <div className="row row-bottom">
-          <div className="card">
-            <div className="card-head">
-              <div className="card-head-title">Suas Metas</div>
-              <button className="icon-btn" onClick={() => openMetaModal(null)}>+</button>
-            </div>
-            <div className="metas-scroll">
-              {metas.length === 0 ? (
-                <div className="empty-msg">Nenhuma meta cadastrada.</div>
-              ) : (
-                metas.map(m => (
-                  <div className="meta-card" key={m.id}>
-                    <div className="meta-d">{m.desc}</div>
-                    <div className="meta-v">{brl(m.val)}</div>
-                    <div className="meta-act">
-                      <button className="edit-m" onClick={() => openMetaModal(m.id)}>✏</button>
-                      <button className="del-m"  onClick={() => delMeta(m.id)}>🗑</button>
+              <div className="summary-card">
+                <div className="summary-nums">
+                  <div className="s-row">
+                    <div className="s-item">
+                      <label>Entradas</label>
+                      <div className="amt">{brl(entTotal)}</div>
+                    </div>
+                    <div className="s-item">
+                      <label>Saídas</label>
+                      <div className="amt">{brl(saiTotal)}</div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-head">
-              <div className="card-head-title">Seu Extrato</div>
-              <div className="head-btns">
-                <button
-                  className={`edit-toggle${editModeOn ? ' on' : ''}`}
-                  onClick={() => setEditModeOn(prev => !prev)}
-                >
-                  {editModeOn ? '✓ Concluir' : '✏ Editar'}
-                </button>
-                <button className="icon-btn" onClick={() => openLanc('entrada')}>+</button>
+                </div>
+                <div className="donut-wrap">
+                  <DonutChart entTotal={entTotal} saiTotal={saiTotal} />
+                </div>
               </div>
             </div>
 
-            <div className="filter-bar">
-              <select className="fsel" value={filterType} onChange={e => setFilterType(e.target.value)}>
-                <option value="all">Todos</option>
-                <option value="entrada">Entradas</option>
-                <option value="saida">Saídas</option>
-              </select>
-              <select className="fsel" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
-                <option value="all">Todas categorias</option>
-                {cats.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            {/* BOTTOM ROW */}
+            <div className="row row-bottom">
 
-            <div className="extrato-scroll">
-              {loading ? (
-                <div className="empty-msg">Carregando…</div>
-              ) : filteredTxns.length === 0 ? (
-                <div className="empty-msg">Nenhuma movimentação encontrada.</div>
-              ) : (
-                filteredTxns.map(t => (
-                  <div className="txn-row" key={t.id}>
-                    <div className="txn-left">
-                      <div className={`dot ${t.type}`} />
-                      <div>
-                        <div className="txn-name">{t.desc}</div>
-                        <div className="txn-sub">{t.cat} · {fmtDate(t.date)}</div>
-                      </div>
-                    </div>
-                    <div className="txn-right">
-                      <div className="txn-val">
-                        {t.type === 'saida' ? '–' : ''}{brl(t.val)}
-                      </div>
-                      {editModeOn && (
-                        <div className="txn-actions show">
-                          <button className="ea" onClick={() => openEditLanc(t)}>✏</button>
-                          <button className="da" onClick={() => delLanc(t.id)}>🗑</button>
+              {/* METAS */}
+              <div className="card">
+                <div className="card-head">
+                  <div className="card-head-title">Suas Metas</div>
+                  <button className="icon-btn" onClick={() => openMetaModal(null)}>+</button>
+                </div>
+                <div className="metas-scroll">
+                  {metas.length === 0 ? (
+                    <div className="empty-msg">Nenhuma meta cadastrada.</div>
+                  ) : (
+                    metas.map(m => (
+                      <div className="meta-card" key={m.id}>
+                        <div className="meta-d">{m.desc}</div>
+                        <div className="meta-v">{brl(m.val)}</div>
+                        <div className="meta-act">
+                          <button className="edit-m" onClick={() => openMetaModal(m.id)}>✏</button>
+                          <button className="del-m"  onClick={() => delMeta(m.id)}>🗑</button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* EXTRATO */}
+              <div className="card">
+                <div className="card-head">
+                  <div className="card-head-title">Seu Extrato</div>
+                  <div className="head-btns">
+                    <button
+                      className={`edit-toggle${editModeOn ? ' on' : ''}`}
+                      onClick={() => setEditModeOn(prev => !prev)}
+                    >
+                      {editModeOn ? '✓ Concluir' : '✏ Editar'}
+                    </button>
+                    <button className="icon-btn" onClick={() => openLanc('entrada')}>+</button>
                   </div>
-                ))
-              )}
+                </div>
+
+                <div className="filter-bar">
+                  <select className="fsel" value={filterType} onChange={e => setFilterType(e.target.value)}>
+                    <option value="all">Todos</option>
+                    <option value="entrada">Entradas</option>
+                    <option value="saida">Saídas</option>
+                  </select>
+                  <select className="fsel" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+                    <option value="all">Todas categorias</option>
+                    {cats.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="extrato-scroll">
+                  {loading ? (
+                    <div className="empty-msg">Carregando…</div>
+                  ) : filteredTxns.length === 0 ? (
+                    <div className="empty-msg">Nenhuma movimentação encontrada.</div>
+                  ) : (
+                    filteredTxns.map(t => (
+                      <div className="txn-row" key={t.id}>
+                        <div className="txn-left">
+                          <div className={`dot ${t.type}`} />
+                          <div>
+                            <div className="txn-name">{t.desc}</div>
+                            <div className="txn-sub">{t.cat} · {fmtDate(t.date)}</div>
+                          </div>
+                        </div>
+                        <div className="txn-right">
+                          <div className="txn-val">
+                            {t.type === 'saida' ? '–' : ''}{brl(t.val)}
+                          </div>
+                          {editModeOn && (
+                            <div className="txn-actions show">
+                              <button className="ea" onClick={() => openEditLanc(t)}>✏</button>
+                              <button className="da" onClick={() => delLanc(t.id)}>🗑</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
             </div>
-          </div>
-        </div>
+          </>
+        )}
+
       </main>
 
       {/* ═══ MODAL: NOVO LANÇAMENTO ═══ */}
@@ -523,6 +611,7 @@ function Dashboard({ user, onLogout }) {
 
       {/* ═══ TOAST ═══ */}
       <div className={`toast${toastVisible ? ' show' : ''}`}>{toastMsg}</div>
+
     </div>
   )
 }
