@@ -14,6 +14,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -27,7 +29,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -36,25 +38,37 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, authException) -> escreverErro(
-                                response,
-                                HttpStatus.UNAUTHORIZED,
-                                "Token ausente ou inválido",
-                                request.getRequestURI()
-                        ))
-                        .accessDeniedHandler((request, response, accessDeniedException) -> escreverErro(
-                                response,
-                                HttpStatus.FORBIDDEN,
-                                "Acesso negado",
-                                request.getRequestURI()
-                        ))
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler())
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
+        return build(http);
+    }
+
+    SecurityFilterChain build(HttpSecurity http) throws Exception {
         return http.build();
     }
 
-    private void escreverErro(HttpServletResponse response, HttpStatus status, String message, String path) throws java.io.IOException {
+    AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> escreverErro(
+                response,
+                HttpStatus.UNAUTHORIZED,
+                "Token ausente ou inválido",
+                request.getRequestURI()
+        );
+    }
+
+    AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> escreverErro(
+                response,
+                HttpStatus.FORBIDDEN,
+                "Acesso negado",
+                request.getRequestURI()
+        );
+    }
+
+    void escreverErro(HttpServletResponse response, HttpStatus status, String message, String path) throws java.io.IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write("""
@@ -62,7 +76,7 @@ public class SecurityConfig {
                 .formatted(status.value(), escapeJson(status.getReasonPhrase()), escapeJson(message), escapeJson(path)));
     }
 
-    private String escapeJson(String value) {
+    String escapeJson(String value) {
         return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
