@@ -1,5 +1,6 @@
 package com.ucb.finlog.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -24,8 +25,9 @@ public class Movimentacao {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private TipoMovimentacao tipo; // RECEITA ou DESPESA
+    private TipoMovimentacao tipo;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;

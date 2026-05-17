@@ -2,7 +2,6 @@ package com.ucb.finlog.controller;
 
 import com.ucb.finlog.dto.CategoriaDTO;
 import com.ucb.finlog.dto.CategoriaResumoDTO;
-import com.ucb.finlog.model.Movimentacao;
 import com.ucb.finlog.service.CategoriaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -113,21 +112,5 @@ public class CategoriaController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
-    }
-
-    // ────────────────────────────────────────
-    //  ENDPOINT DE TESTE (remover após integração)
-    //  Permite adicionar movimentações em memória para testar o resumo
-    // ────────────────────────────────────────
-
-    /**
-     * POST /api/categorias/teste/movimentacao
-     * Apenas para testes sem banco. Remover quando o banco estiver pronto.
-     * Body: { "descricao": "Almoço", "valor": 35.00, "data": "2026-05-14",
-     *         "tipo": "DESPESA", "categoriaId": 1 }
-     */
-    @PostMapping("/teste/movimentacao")
-    public ResponseEntity<Movimentacao> salvarMovimentacaoTeste(@RequestBody Movimentacao mov) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.salvarMovimentacao(mov));
     }
 }

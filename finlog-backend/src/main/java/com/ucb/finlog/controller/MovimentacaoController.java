@@ -14,8 +14,15 @@ public class MovimentacaoController {
     @Autowired
     private MovimentacaoService service;
 
+    /**
+     * GET /api/movimentacoes?usuarioId=1
+     * Lista movimentações. Se usuarioId for informado, filtra por usuário.
+     */
     @GetMapping
-    public List<Movimentacao> listar() {
+    public List<Movimentacao> listar(@RequestParam(required = false) Long usuarioId) {
+        if (usuarioId != null) {
+            return service.listarPorUsuario(usuarioId);
+        }
         return service.listarTodas();
     }
 
@@ -27,5 +34,16 @@ public class MovimentacaoController {
     @PostMapping
     public Movimentacao salvar(@RequestBody Movimentacao movimentacao) {
         return service.salvar(movimentacao);
+    }
+
+    @PutMapping("/{id}")
+    public Movimentacao atualizar(@PathVariable Long id, @RequestBody Movimentacao movimentacao) {
+        movimentacao.setId(id);
+        return service.salvar(movimentacao);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletar(@PathVariable Long id) {
+        service.deletar(id);
     }
 }

@@ -17,23 +17,11 @@ import java.util.stream.Collectors;
 @Service
 public class CategoriaService {
 
-    // ─────────────────────────────────────────────────────────
-    // ARMAZENAMENTO EM MEMÓRIA
-    // TODO: remover os campos abaixo quando o banco estiver pronto.
-    //       O @Autowired de CategoriaRepository e MovimentacaoRepository
-    //       já está preparado — basta descomentar e deletar os mapas.
-    // ─────────────────────────────────────────────────────────
+    @Autowired
+    private CategoriaRepository categoriaRepository;
 
-    private final Map<Long, Categoria>    memoriaCategoria    = new LinkedHashMap<>();
-    private final Map<Long, Movimentacao> memoriaMovimentacao = new LinkedHashMap<>();
-    private long proximoIdCategoria    = 1L;
-    private long proximoIdMovimentacao = 1L;
-
-    // @Autowired
-    // private CategoriaRepository categoriaRepository;
-
-    // @Autowired
-    // private MovimentacaoRepository movimentacaoRepository;
+    @Autowired
+    private MovimentacaoRepository movimentacaoRepository;
 
     // ════════════════════════════════════════
     //  CATEGORIAS — CRUD
@@ -41,21 +29,18 @@ public class CategoriaService {
 
     /** Lista todas as categorias cadastradas. */
     public List<CategoriaDTO> listarTodas() {
-        return memoriaCategoria.values().stream()
-                .map(this::toDTO)
+        List<Movimentacao> todasMovs = movimentacaoRepository.findAll();
+        return categoriaRepository.findAll()
+                .stream()
+                .map(cat -> toDTO(cat, todasMovs))
                 .collect(Collectors.toList());
-
-        // TODO (banco): return categoriaRepository.findAll()
-        //                  .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     /** Busca uma categoria pelo ID. Retorna null se não encontrada. */
     public CategoriaDTO buscarPorId(Long id) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) return null;
-        return toDTO(cat);
-
-        // TODO (banco): return categoriaRepository.findById(id).map(this::toDTO).orElse(null);
+        return categoriaRepository.findById(id)
+                .map(cat -> toDTO(cat, movimentacaoRepository.findAll()))
+                .orElse(null);
     }
 
     /**
@@ -67,28 +52,15 @@ public class CategoriaService {
         if (nome.isEmpty()) {
             throw new IllegalArgumentException("O nome da categoria é obrigatório.");
         }
-
-        boolean nomeRepetido = memoriaCategoria.values().stream()
-                .anyMatch(c -> c.getNome().equalsIgnoreCase(nome));
-        if (nomeRepetido) {
+        if (categoriaRepository.existsByNomeIgnoreCase(nome)) {
             throw new IllegalArgumentException("Já existe uma categoria com este nome: " + nome);
         }
 
         Categoria cat = new Categoria();
-        cat.setId(proximoIdCategoria++);
         cat.setNome(nome);
         cat.setDescricao(dto.getDescricao());
 
-        memoriaCategoria.put(cat.getId(), cat);
-        return toDTO(cat);
-
-        // TODO (banco):
-        // if (categoriaRepository.existsByNomeIgnoreCase(nome))
-        //     throw new IllegalArgumentException("Já existe uma categoria com este nome.");
-        // Categoria cat = new Categoria();
-        // cat.setNome(nome);
-        // cat.setDescricao(dto.getDescricao());
-        // return toDTO(categoriaRepository.save(cat));
+        return toDTO(categoriaRepository.save(cat), movimentacaoRepository.findAll());
     }
 
     /**
@@ -96,17 +68,15 @@ public class CategoriaService {
      * Lança IllegalArgumentException se não encontrada ou se o novo nome já existir em outra.
      */
     public CategoriaDTO atualizar(Long id, CategoriaDTO dto) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) {
-            throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
-        }
+        Categoria cat = categoriaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada: id=" + id));
 
         String novoNome = dto.getNome() == null ? "" : dto.getNome().trim();
         if (novoNome.isEmpty()) {
             throw new IllegalArgumentException("O nome da categoria é obrigatório.");
         }
 
-        boolean nomeRepetido = memoriaCategoria.values().stream()
+        boolean nomeRepetido = categoriaRepository.findAll().stream()
                 .anyMatch(c -> !c.getId().equals(id) && c.getNome().equalsIgnoreCase(novoNome));
         if (nomeRepetido) {
             throw new IllegalArgumentException("Já existe outra categoria com este nome: " + novoNome);
@@ -114,14 +84,7 @@ public class CategoriaService {
 
         cat.setNome(novoNome);
         cat.setDescricao(dto.getDescricao());
-        return toDTO(cat);
-
-        // TODO (banco):
-        // Categoria cat = categoriaRepository.findById(id)
-        //     .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
-        // cat.setNome(novoNome);
-        // cat.setDescricao(dto.getDescricao());
-        // return toDTO(categoriaRepository.save(cat));
+        return toDTO(categoriaRepository.save(cat), movimentacaoRepository.findAll());
     }
 
     /**
@@ -129,28 +92,19 @@ public class CategoriaService {
      * Lança IllegalStateException se houver movimentações vinculadas a ela.
      */
     public void deletar(Long id) {
-        if (!memoriaCategoria.containsKey(id)) {
+        if (!categoriaRepository.existsById(id)) {
             throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
         }
 
-        boolean temMovimentacoes = memoriaMovimentacao.values().stream()
-                .anyMatch(m -> id.equals(m.getCategoriaId()));
+        boolean temMovimentacoes = movimentacaoRepository.findAll().stream()
+                .anyMatch(m -> m.getCategoria() != null && id.equals(m.getCategoria().getId()));
         if (temMovimentacoes) {
             throw new IllegalStateException(
                 "Não é possível excluir: existem movimentações vinculadas a esta categoria."
             );
         }
 
-        memoriaCategoria.remove(id);
-
-        // TODO (banco):
-        // if (!categoriaRepository.existsById(id))
-        //     throw new IllegalArgumentException("Categoria não encontrada.");
-        // boolean temMovimentacoes = movimentacaoRepository.findAll().stream()
-        //     .anyMatch(m -> id.equals(m.getCategoriaId()));
-        // if (temMovimentacoes)
-        //     throw new IllegalStateException("Não é possível excluir: existem movimentações vinculadas.");
-        // categoriaRepository.deleteById(id);
+        categoriaRepository.deleteById(id);
     }
 
     // ════════════════════════════════════════
@@ -162,70 +116,32 @@ public class CategoriaService {
      * total de movimentações, total de receitas, total de despesas e saldo.
      */
     public List<CategoriaResumoDTO> resumo() {
-        List<CategoriaResumoDTO> resultado = new ArrayList<>();
+        List<Movimentacao> todasMovs = movimentacaoRepository.findAll();
 
-        for (Categoria cat : memoriaCategoria.values()) {
-            List<Movimentacao> movs = memoriaMovimentacao.values().stream()
-                    .filter(m -> cat.getId().equals(m.getCategoriaId()))
-                    .collect(Collectors.toList());
-
-            CategoriaResumoDTO r = calcularResumo(cat, movs);
-            resultado.add(r);
-        }
-
-        // Ordenar por total de despesas (maior primeiro)
-        resultado.sort(Comparator.comparing(CategoriaResumoDTO::getTotalDespesas).reversed());
-
-        return resultado;
-
-        // TODO (banco):
-        // List<Categoria> cats = categoriaRepository.findAll();
-        // List<Movimentacao> todasMovs = movimentacaoRepository.findAll();
-        // return cats.stream().map(cat -> {
-        //     List<Movimentacao> movs = todasMovs.stream()
-        //         .filter(m -> cat.getId().equals(m.getCategoriaId()))
-        //         .collect(Collectors.toList());
-        //     return calcularResumo(cat, movs);
-        // }).sorted(Comparator.comparing(CategoriaResumoDTO::getTotalDespesas).reversed())
-        //   .collect(Collectors.toList());
+        return categoriaRepository.findAll().stream()
+                .map(cat -> {
+                    List<Movimentacao> movs = todasMovs.stream()
+                            .filter(m -> m.getCategoria() != null
+                                    && cat.getId().equals(m.getCategoria().getId()))
+                            .collect(Collectors.toList());
+                    return calcularResumo(cat, movs);
+                })
+                .sorted(Comparator.comparing(CategoriaResumoDTO::getTotalDespesas).reversed())
+                .collect(Collectors.toList());
     }
 
     /**
      * Resumo de uma categoria específica.
      */
     public CategoriaResumoDTO resumoPorId(Long id) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) {
-            throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
-        }
+        Categoria cat = categoriaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada: id=" + id));
 
-        List<Movimentacao> movs = memoriaMovimentacao.values().stream()
-                .filter(m -> id.equals(m.getCategoriaId()))
+        List<Movimentacao> movs = movimentacaoRepository.findAll().stream()
+                .filter(m -> m.getCategoria() != null && id.equals(m.getCategoria().getId()))
                 .collect(Collectors.toList());
 
         return calcularResumo(cat, movs);
-
-        // TODO (banco):
-        // Categoria cat = categoriaRepository.findById(id)
-        //     .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
-        // List<Movimentacao> movs = movimentacaoRepository.findAll().stream()
-        //     .filter(m -> id.equals(m.getCategoriaId())).collect(Collectors.toList());
-        // return calcularResumo(cat, movs);
-    }
-
-    // ════════════════════════════════════════
-    //  MOVIMENTAÇÕES (memória) — para testes
-    //  TODO: remover quando o banco estiver pronto
-    // ════════════════════════════════════════
-
-    /** Salva uma movimentação em memória (usado nos testes sem banco). */
-    public Movimentacao salvarMovimentacao(Movimentacao mov) {
-        if (mov.getId() == null) {
-            mov.setId(proximoIdMovimentacao++);
-        }
-        memoriaMovimentacao.put(mov.getId(), mov);
-        return mov;
-        // TODO (banco): return movimentacaoRepository.save(mov);
     }
 
     // ════════════════════════════════════════
@@ -253,21 +169,20 @@ public class CategoriaService {
         return r;
     }
 
-    private CategoriaDTO toDTO(Categoria cat) {
+    private CategoriaDTO toDTO(Categoria cat, List<Movimentacao> todasMovs) {
+        List<Movimentacao> movsDaCategoria = todasMovs.stream()
+                .filter(m -> m.getCategoria() != null && cat.getId().equals(m.getCategoria().getId()))
+                .collect(Collectors.toList());
+
+        BigDecimal total = movsDaCategoria.stream()
+                .map(Movimentacao::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         CategoriaDTO dto = new CategoriaDTO();
         dto.setId(cat.getId());
         dto.setNome(cat.getNome());
         dto.setDescricao(cat.getDescricao());
-
-        long count = memoriaMovimentacao.values().stream()
-                .filter(m -> cat.getId().equals(m.getCategoriaId()))
-                .count();
-        BigDecimal total = memoriaMovimentacao.values().stream()
-                .filter(m -> cat.getId().equals(m.getCategoriaId()))
-                .map(Movimentacao::getValor)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        dto.setTotalMovimentacoes((int) count);
+        dto.setTotalMovimentacoes(movsDaCategoria.size());
         dto.setTotalValor(total);
         return dto;
     }

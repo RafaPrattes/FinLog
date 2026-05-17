@@ -1,5 +1,6 @@
 package com.ucb.finlog.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
@@ -19,8 +20,9 @@ public class Usuario {
     private String email;
 
     @Column(nullable = false)
-    private String senha; // RNF003: Segurança com Hash [cite: 484]
+    private String senha;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "usuario")
     private List<Movimentacao> movimentacoes;
 }
