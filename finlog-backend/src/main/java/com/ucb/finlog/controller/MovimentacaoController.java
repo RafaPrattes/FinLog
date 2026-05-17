@@ -23,4 +23,9 @@ public class MovimentacaoController {
     public Movimentacao salvar(@RequestBody Movimentacao movimentacao) {
         return service.salvar(movimentacao);
     }
+
+    @GetMapping("/usuario/{usuarioId}/saldo")
+    public Double obterSaldo(@PathVariable Long usuarioId) {
+        return service.calcularSaldo(usuarioId);
+    }
 }

@@ -29,4 +29,8 @@ public class MovimentacaoService {
     public Movimentacao buscarPorId(Long id) {
         return repository.findById(id).orElse(null);
     }
+
+    public Double calcularSaldo(Long usuarioId) {
+        return repository.calcularSaldoPorUsuario(usuarioId);
+    }
 }
