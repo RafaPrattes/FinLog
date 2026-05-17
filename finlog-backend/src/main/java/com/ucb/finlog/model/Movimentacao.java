@@ -1,16 +1,18 @@
 package com.ucb.finlog.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Data
 @Entity
 @Table(name = "movimentacoes")
 public class Movimentacao {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,7 +26,11 @@ public class Movimentacao {
     private LocalDate data;
 
     @Enumerated(EnumType.STRING)
-    private TipoMovimentacao tipo; // Crie um Enum com RECEITA, DESPESA
+    private TipoMovimentacao tipo;
+
+    @ManyToOne
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
 
     @JsonBackReference
     @ManyToOne

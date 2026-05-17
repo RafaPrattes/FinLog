@@ -1,23 +1,27 @@
 import { useState } from 'react'
+import api from './service/api'
 
-import Login    from './components/Login'
+import Login from './components/Login'
 import Register from './components/Register'
 import Dashboard from './components/Dashboard'
 
 function App() {
-
-  /*Essas duas linhas comentadas são para o fluxo normal do app, onde o usuário começa na tela de login
-  eu só as tirei para poder testar a dashboard sem precisar passar pelo Login toda hora*/
-  const [screen,      setScreen]      = useState('login')
+  const [screen, setScreen] = useState('login')
   const [currentUser, setCurrentUser] = useState(null)
 
+  function handleLogin(response) {
+    const { usuario, token } = response
 
-  function handleLogin(user) {
-    setCurrentUser(user)
+    localStorage.setItem('token', token)
+    api.defaults.headers.common.Authorization = `Bearer ${token}`
+
+    setCurrentUser(usuario)
     setScreen('dashboard')
   }
 
   function handleLogout() {
+    localStorage.removeItem('token')
+    delete api.defaults.headers.common.Authorization
     setCurrentUser(null)
     setScreen('login')
   }

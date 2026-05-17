@@ -31,14 +31,14 @@ function Register({ goToLogin }) {
       setError('As senhas não coincidem.')
       return
     }
-    if (p.length < 4) {
-      setError('A senha deve ter ao menos 4 caracteres.')
+    if (p.length < 6) {
+      setError('A senha deve ter ao menos 6 caracteres.')
       return
     }
 
     try {
       setLoading(true)
-      await api.post('/usuarios', { nome: n, email: em, senha: p })
+      await api.post('/cadastro', { nome: n, email: em, senha: p })
       goToLogin()
     } catch (err) {
       const msg = err.response?.data || 'Erro ao cadastrar. Tente novamente.'
