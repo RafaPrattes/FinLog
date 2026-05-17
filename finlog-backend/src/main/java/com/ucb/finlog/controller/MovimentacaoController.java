@@ -14,16 +14,11 @@ public class MovimentacaoController {
     @Autowired
     private MovimentacaoService service;
 
-    @GetMapping
-    public List<Movimentacao> listar() {
-        return service.listarTodas();
+    // A rota agora exige o ID do dono da conta
+    @GetMapping("/usuario/{usuarioId}")
+    public List<Movimentacao> listarDoUsuario(@PathVariable Long usuarioId) {
+        return service.listarPorUsuario(usuarioId);
     }
-
-    @GetMapping("/{id}")
-    public Movimentacao buscar(@PathVariable Long id) {
-        return service.buscarPorId(id);
-    }
-
     @PostMapping
     public Movimentacao salvar(@RequestBody Movimentacao movimentacao) {
         return service.salvar(movimentacao);

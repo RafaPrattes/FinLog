@@ -4,6 +4,7 @@ import com.ucb.finlog.model.Movimentacao;
 import com.ucb.finlog.repository.MovimentacaoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 @Service
@@ -12,12 +13,16 @@ public class MovimentacaoService {
     @Autowired
     private MovimentacaoRepository repository;
 
-    public List<Movimentacao> listarTodas() {
-        return repository.findAll();
+    // Novo método que utiliza a busca isolada
+    public List<Movimentacao> listarPorUsuario(Long usuarioId) {
+        return repository.findByUsuarioId(usuarioId);
     }
 
+    // Método de salvar com validação de segurança
     public Movimentacao salvar(Movimentacao movimentacao) {
-        // Futuramente: Adicionar validações de negócio aqui (ex: saldo insuficiente)
+        if (movimentacao.getUsuario() == null || movimentacao.getUsuario().getId() == null) {
+            throw new IllegalArgumentException("Bloqueado: Toda movimentação precisa de um usuário vinculado.");
+        }
         return repository.save(movimentacao);
     }
 

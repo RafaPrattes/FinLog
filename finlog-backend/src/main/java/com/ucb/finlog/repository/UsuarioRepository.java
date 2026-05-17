@@ -8,3 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     // Aqui poderemos criar buscas por e-mail para o UC01 (Login) futuramente
 }
+
+
