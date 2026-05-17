@@ -13,10 +13,11 @@ public class HomeController {
         return Map.of(
                 "status", "FinLog backend em execucao",
                 "endpointsPublicos", List.of(
-                        "POST /api/usuarios",
+                        "POST /api/cadastro",
                         "POST /api/auth/login"
                 ),
                 "endpointsAutenticados", List.of(
+                        "GET /api/usuarios",
                         "GET /api/usuarios/me",
                         "GET /api/movimentacoes",
                         "POST /api/movimentacoes",

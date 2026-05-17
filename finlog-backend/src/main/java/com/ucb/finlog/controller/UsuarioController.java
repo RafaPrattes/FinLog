@@ -1,17 +1,14 @@
 package com.ucb.finlog.controller;
 
-import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.UsuarioResponse;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.UsuarioService;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -22,10 +19,11 @@ public class UsuarioController {
         this.service = service;
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public UsuarioResponse cadastrar(@RequestBody CadastroUsuarioRequest request) {
-        return UsuarioResponse.from(service.cadastrar(request));
+    @GetMapping
+    public List<UsuarioResponse> listar() {
+        return service.listarTodos().stream()
+                .map(UsuarioResponse::from)
+                .toList();
     }
 
     @GetMapping("/me")
