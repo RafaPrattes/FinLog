@@ -65,7 +65,7 @@ function DonutChart({ entTotal, saiTotal }) {
 
 /* ══════════════════════════════
    CHATBOT
-   TODO: integrar com backend (/api/chat)
+   Falta fazer ainda: integrar com backend (/api/chat)
 ══════════════════════════════ */
 function ChatBot({ user }) {
   const [messages, setMessages] = useState([
@@ -85,12 +85,15 @@ function ChatBot({ user }) {
     setMessages(prev => [...prev, { role: 'user', text }])
     setInput('')
     setLoading(true)
-    /* TODO: const { data } = await api.post('/chat', { message: text })
-             setMessages(prev => [...prev, { role: 'assistant', text: data.reply }]) */
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Em breve estarei conectado ao backend! 🚀' }])
+
+    try {
+      const { data } = await api.get('/ai/conselho')
+      setMessages(prev => [...prev, { role: 'assistant', text: data }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (
