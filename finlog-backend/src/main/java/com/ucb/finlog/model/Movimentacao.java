@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Data
 @Entity
@@ -25,6 +26,7 @@ public class Movimentacao {
     @Enumerated(EnumType.STRING)
     private TipoMovimentacao tipo; // Crie um Enum com RECEITA, DESPESA
 
+    @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     @JsonIgnore
