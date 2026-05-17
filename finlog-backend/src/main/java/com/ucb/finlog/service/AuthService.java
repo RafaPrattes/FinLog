@@ -24,22 +24,26 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        if (request.email() == null || request.senha() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail e senha sao obrigatorios");
+        if (request == null || request.email() == null || request.senha() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail e senha são obrigatórios");
         }
 
         Usuario usuario = usuarioRepository.findByEmail(request.email().trim().toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais invalidas"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
 
         if (!passwordEncoder.matches(request.senha(), usuario.getSenha())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais invalidas");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
         }
 
+        return criarResposta(usuario);
+    }
+
+    private AuthResponse criarResposta(Usuario usuario) {
         return new AuthResponse(
+                UsuarioResponse.from(usuario),
                 authTokenService.gerarToken(usuario),
                 "Bearer",
-                authTokenService.getExpirationSeconds(),
-                UsuarioResponse.from(usuario)
+                authTokenService.getExpirationSeconds()
         );
     }
 }
