@@ -10,18 +10,18 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
     private final AuthTokenFilter authTokenFilter;
 
     public SecurityConfig(AuthTokenFilter authTokenFilter) {
@@ -71,9 +71,15 @@ public class SecurityConfig {
     void escreverErro(HttpServletResponse response, HttpStatus status, String message, String path) throws java.io.IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
         response.getWriter().write("""
                 {"status":%d,"error":"%s","message":"%s","path":"%s"}"""
-                .formatted(status.value(), escapeJson(status.getReasonPhrase()), escapeJson(message), escapeJson(path)));
+                .formatted(
+                        status.value(),
+                        escapeJson(status.getReasonPhrase()),
+                        escapeJson(message),
+                        escapeJson(path)
+                ));
     }
 
     String escapeJson(String value) {
