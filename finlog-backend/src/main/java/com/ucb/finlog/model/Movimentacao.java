@@ -23,17 +23,11 @@ public class Movimentacao {
     private LocalDate data;
 
     @Enumerated(EnumType.STRING)
-    private TipoMovimentacao tipo; // RECEITA ou DESPESA
+    private TipoMovimentacao tipo;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
-
-    // TODO: quando o banco estiver pronto, descomentar o relacionamento abaixo
-    // e remover o campo categoriaId
-    // @ManyToOne
-    // @JoinColumn(name = "categoria_id")
-    // private Categoria categoria;
 
     @Column(name = "categoria_id")
     private Long categoriaId;
