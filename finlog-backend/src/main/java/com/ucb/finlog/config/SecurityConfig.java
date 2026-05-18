@@ -12,9 +12,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -31,8 +30,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            http
-                .cors(cors -> {})
+        http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -52,8 +50,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public AuthenticationEntryPoint authenticationEntryPoint() {
+    AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> escreverErro(
                 response,
                 HttpStatus.UNAUTHORIZED,
@@ -62,8 +59,7 @@ public class SecurityConfig {
         );
     }
 
-    @Bean
-    public AccessDeniedHandler accessDeniedHandler() {
+    AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> escreverErro(
                 response,
                 HttpStatus.FORBIDDEN,
@@ -72,9 +68,7 @@ public class SecurityConfig {
         );
     }
 
-    void escreverErro(HttpServletResponse response, HttpStatus status, String message, String path)
-            throws java.io.IOException {
-
+    void escreverErro(HttpServletResponse response, HttpStatus status, String message, String path) throws java.io.IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
@@ -89,10 +83,7 @@ public class SecurityConfig {
     }
 
     String escapeJson(String value) {
-        return value == null
-                ? ""
-                : value.replace("\\", "\\\\")
-                       .replace("\"", "\\\"");
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     @Bean
