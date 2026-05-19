@@ -109,6 +109,6 @@ class SecurityConfigTest {
         StaticApplicationContext context = new StaticApplicationContext();
         http.setSharedObject(ApplicationContext.class, context);
 
-        assertInstanceOf(SecurityFilterChain.class, config.securityFilterChain(http));
+        assertInstanceOf(SecurityFilterChain.class, config.filterChain(http));
     }
 }

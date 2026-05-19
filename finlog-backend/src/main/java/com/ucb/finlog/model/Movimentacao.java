@@ -30,4 +30,12 @@ public class Movimentacao {
     @JoinColumn(name = "usuario_id")
     @JsonIgnore
     private Usuario usuario;
+
+    @ManyToOne
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
+
+    public Long getCategoriaId() {
+        return categoria != null ? categoria.getId() : null;
+    }
 }

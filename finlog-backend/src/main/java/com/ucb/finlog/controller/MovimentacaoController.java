@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -35,5 +38,11 @@ public class MovimentacaoController {
     @PostMapping
     public Movimentacao salvar(@RequestBody Movimentacao movimentacao, @AuthenticationPrincipal UsuarioAutenticado usuario) {
         return service.salvar(movimentacao, usuario.email());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletar(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado usuario) {
+    service.deletar(id, usuario.email());
     }
 }

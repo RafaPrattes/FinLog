@@ -64,6 +64,21 @@ function DonutChart({ entTotal, saiTotal }) {
 }
 
 /* ══════════════════════════════
+   UTILS — Markdown
+══════════════════════════════ */
+function stripMarkdown(text) {
+  if (!text) return ''
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
+    .replace(/\*(.*?)\*/g, '$1')        // *itálico*
+    .replace(/#{1,6}\s*/g, '')          // ## títulos
+    .replace(/`(.*?)`/g, '$1')          // `código inline`
+    .replace(/^\s*[-*+]\s+/gm, '')      // listas com marcadores
+    .replace(/^\s*\d+\.\s+/gm, '')      // listas numeradas
+    .trim()
+}
+
+/* ══════════════════════════════
    CHATBOT
    Falta fazer ainda: integrar com backend (/api/chat)
 ══════════════════════════════ */
@@ -101,7 +116,7 @@ function ChatBot({ user }) {
       <h2 className="page-title">Assistente IA</h2>
       <div className="chat-messages">
         {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+          <div key={i} className={`chat-bubble ${m.role}`}>{stripMarkdown(m.text)}</div>
         ))}
         {loading && <div className="chat-bubble assistant chat-typing">digitando…</div>}
         <div ref={bottomRef} />
@@ -222,6 +237,7 @@ function Dashboard({ user, onLogout }) {
         data:      date,
         tipo:      lancType === 'entrada' ? 'RECEITA' : 'DESPESA',
         usuario:   { id: user.id },
+        categoria: { nome: cat },
       }
       const { data } = await api.post('/movimentacoes', payload)
       const nova = {
@@ -232,9 +248,18 @@ function Dashboard({ user, onLogout }) {
         date: data.data,
         cat:  data.categoria?.nome || cat,
       }
-      setTxns(prev => [...prev, nova])
       setLancModal(false)
       showToast(lancType === 'entrada' ? 'Receita registrada!' : 'Despesa registrada!')
+      // Recarrega lista do backend para garantir IDs corretos (necessário para deletar)
+      const { data: updated } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
+      setTxns(updated.map(m => ({
+        id:   m.id,
+        type: m.tipo === 'RECEITA' ? 'entrada' : 'saida',
+        desc: m.descricao,
+        val:  parseFloat(m.valor) || 0,
+        date: m.data,
+        cat:  m.categoria?.nome || 'Outros',
+      })))
     } catch (err) {
       console.error('Erro ao salvar lançamento:', err)
       showToast('Erro ao salvar. Tente novamente.')
@@ -263,6 +288,7 @@ function Dashboard({ user, onLogout }) {
         data:      date,
         tipo:      editLancModal.type === 'entrada' ? 'RECEITA' : 'DESPESA',
         usuario:   { id: user.id },
+        categoria: { nome: cat },
       }
       await api.put(`/movimentacoes/${editLancModal.id}`, payload)
       setTxns(prev =>
