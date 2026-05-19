@@ -4,6 +4,7 @@ import com.ucb.finlog.security.AuthTokenFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.StaticApplicationContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -14,9 +15,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -97,6 +100,21 @@ class SecurityConfigTest {
     }
 
     @Test
+    void corsConfigurationDevePermitirFrontendLocalEHeadersDeAutenticacao() {
+        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.OPTIONS.name(), "/api/cadastro");
+        CorsConfiguration cors = config.corsConfigurationSource().getCorsConfiguration(request);
+
+        assertNotNull(cors);
+        assertEquals(
+                java.util.List.of("http://localhost:5173", "http://localhost:5174"),
+                cors.getAllowedOrigins()
+        );
+        assertEquals(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"), cors.getAllowedMethods());
+        assertEquals(java.util.List.of("Content-Type", "Authorization"), cors.getAllowedHeaders());
+        assertEquals(true, cors.getAllowCredentials());
+    }
+
+    @Test
     void deveCriarSecurityFilterChain() throws Exception {
         ObjectPostProcessor<Object> postProcessor = new ObjectPostProcessor<>() {
             @Override
@@ -109,6 +127,6 @@ class SecurityConfigTest {
         StaticApplicationContext context = new StaticApplicationContext();
         http.setSharedObject(ApplicationContext.class, context);
 
-        assertInstanceOf(SecurityFilterChain.class, config.filterChain(http));
+        assertInstanceOf(SecurityFilterChain.class, config.securityFilterChain(http));
     }
 }
