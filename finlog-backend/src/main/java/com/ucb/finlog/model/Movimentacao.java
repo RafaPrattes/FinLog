@@ -10,6 +10,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "movimentacoes")
 public class Movimentacao {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,7 +24,7 @@ public class Movimentacao {
     private LocalDate data;
 
     @Enumerated(EnumType.STRING)
-    private TipoMovimentacao tipo; // Crie um Enum com RECEITA, DESPESA
+    private TipoMovimentacao tipo;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
