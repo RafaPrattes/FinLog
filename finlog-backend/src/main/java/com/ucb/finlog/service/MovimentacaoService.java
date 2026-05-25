@@ -58,4 +58,27 @@ public class MovimentacaoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Movimentação não encontrada"));
         repository.delete(movimentacao);
     }
+
+    public Movimentacao atualizar(Long id, Movimentacao movimentacao, String emailUsuario) {
+    Movimentacao existente = repository.findByIdAndUsuarioEmail(id, emailUsuario)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Movimentação não encontrada"));
+
+    existente.setDescricao(movimentacao.getDescricao());
+    existente.setValor(movimentacao.getValor());
+    existente.setData(movimentacao.getData());
+    existente.setTipo(movimentacao.getTipo());
+
+    if (movimentacao.getCategoria() != null && movimentacao.getCategoria().getNome() != null) {
+        String nomeCategoria = movimentacao.getCategoria().getNome().trim();
+        Categoria categoria = categoriaRepository.findByNomeIgnoreCase(nomeCategoria)
+                .orElseGet(() -> {
+                    Categoria nova = new Categoria();
+                    nova.setNome(nomeCategoria);
+                    return categoriaRepository.save(nova);
+                });
+        existente.setCategoria(categoria);
+    }
+
+    return repository.save(existente);
+    }   
 }
