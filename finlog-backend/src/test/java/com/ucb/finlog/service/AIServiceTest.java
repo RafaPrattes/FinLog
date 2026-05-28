@@ -2,6 +2,7 @@ package com.ucb.finlog.service;
 
 import com.ucb.finlog.dto.GeminiRequest;
 import com.ucb.finlog.dto.GeminiResponse;
+import com.ucb.finlog.model.Categoria;
 import com.ucb.finlog.model.Movimentacao;
 import com.ucb.finlog.model.TipoMovimentacao;
 import com.ucb.finlog.repository.MovimentacaoRepository;
@@ -20,6 +21,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,29 +41,52 @@ class AIServiceTest {
         ReflectionTestUtils.setField(service, "apiKey", "chave");
         ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
 
-        Movimentacao movimentacao = new Movimentacao();
-        movimentacao.setTipo(TipoMovimentacao.RECEITA);
-        movimentacao.setDescricao("Salario");
-        movimentacao.setValor(BigDecimal.valueOf(5000));
+        Movimentacao receita = new Movimentacao();
+        receita.setTipo(TipoMovimentacao.RECEITA);
+        receita.setDescricao("Salario");
+        receita.setValor(BigDecimal.valueOf(5000));
+
+        Categoria categoria = new Categoria();
+        categoria.setNome("Mercado");
+
+        Movimentacao despesa = new Movimentacao();
+        despesa.setTipo(TipoMovimentacao.DESPESA);
+        despesa.setDescricao("Compras");
+        despesa.setValor(BigDecimal.valueOf(750));
+        despesa.setCategoria(categoria);
 
         GeminiResponse response = new GeminiResponse(List.of(
                 new GeminiResponse.Candidate(new GeminiResponse.Content(List.of(
-                        new GeminiResponse.Part("Poupe parte da renda todo mês.")
+                        new GeminiResponse.Part("Poupe parte da renda todo mes.")
                 )))
         ));
 
-        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(movimentacao));
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(receita, despesa));
         when(restTemplate.postForObject(eq("https://gemini.test?key=chave"), org.mockito.ArgumentMatchers.any(), eq(GeminiResponse.class)))
                 .thenReturn(response);
 
         String conselho = service.obterConselhoIA("maria@email.com");
 
-        assertEquals("Poupe parte da renda todo mês.", conselho);
+        assertEquals("Poupe parte da renda todo mes.", conselho);
 
         ArgumentCaptor<GeminiRequest> requestCaptor = ArgumentCaptor.forClass(GeminiRequest.class);
         verify(restTemplate).postForObject(eq("https://gemini.test?key=chave"), requestCaptor.capture(), eq(GeminiResponse.class));
         String prompt = requestCaptor.getValue().contents().getFirst().parts().getFirst().text();
-        assertTrue(prompt.contains("RECEITA: Salario R$5000"));
+        assertTrue(prompt.contains("Receitas: R$5000,00"));
+        assertTrue(prompt.contains("Despesas: R$750,00"));
+        assertTrue(prompt.contains("Maior gasto em Mercado: R$750,00"));
+        assertTrue(prompt.contains("Compras (Mercado): R$750,00"));
+    }
+
+    @Test
+    void deveRetornarMensagemParaUsuarioSemMovimentacoes() {
+        ReflectionTestUtils.setField(service, "apiKey", "chave");
+        ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of());
+
+        assertEquals("Comece a registrar suas transacoes para receber recomendacoes personalizadas!", service.obterConselhoIA("maria@email.com"));
+        verify(restTemplate, never()).postForObject(eq("https://gemini.test?key=chave"), org.mockito.ArgumentMatchers.any(), eq(GeminiResponse.class));
     }
 
     @Test
@@ -69,10 +94,32 @@ class AIServiceTest {
         ReflectionTestUtils.setField(service, "apiKey", "chave");
         ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
 
-        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of());
+        Movimentacao movimentacao = new Movimentacao();
+        movimentacao.setTipo(TipoMovimentacao.RECEITA);
+        movimentacao.setDescricao("Freelance");
+        movimentacao.setValor(BigDecimal.valueOf(1000));
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(movimentacao));
         when(restTemplate.postForObject(eq("https://gemini.test?key=chave"), org.mockito.ArgumentMatchers.any(), eq(GeminiResponse.class)))
                 .thenReturn(new GeminiResponse(List.of()));
 
         assertEquals("Continue acompanhando seus gastos para um futuro melhor!", service.obterConselhoIA("maria@email.com"));
+    }
+
+    @Test
+    void deveRetornarMensagemDeErroQuandoApiFalha() {
+        ReflectionTestUtils.setField(service, "apiKey", "chave");
+        ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
+
+        Movimentacao movimentacao = new Movimentacao();
+        movimentacao.setTipo(TipoMovimentacao.RECEITA);
+        movimentacao.setDescricao("Freelance");
+        movimentacao.setValor(BigDecimal.valueOf(1000));
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(movimentacao));
+        when(restTemplate.postForObject(eq("https://gemini.test?key=chave"), org.mockito.ArgumentMatchers.any(), eq(GeminiResponse.class)))
+                .thenThrow(new RuntimeException("falha"));
+
+        assertEquals("Erro ao conectar com a IA. Tente novamente.", service.obterConselhoIA("maria@email.com"));
     }
 }
