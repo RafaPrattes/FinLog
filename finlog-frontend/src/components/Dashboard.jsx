@@ -104,7 +104,7 @@ function ChatBot({ user }) {
     try {
       const { data } = await api.get('/ai/conselho')
       setMessages(prev => [...prev, { role: 'assistant', text: data }])
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
     } finally {
       setLoading(false)
@@ -239,15 +239,7 @@ function Dashboard({ user, onLogout }) {
         usuario:   { id: user.id },
         categoria: { nome: cat },
       }
-      const { data } = await api.post('/movimentacoes', payload)
-      const nova = {
-        id:   data.id,
-        type: lancType,
-        desc: data.descricao,
-        val:  parseFloat(data.valor),
-        date: data.data,
-        cat:  data.categoria?.nome || cat,
-      }
+      await api.post('/movimentacoes', payload)
       setLancModal(false)
       showToast(lancType === 'entrada' ? 'Receita registrada!' : 'Despesa registrada!')
       // Recarrega lista do backend para garantir IDs corretos (necessário para deletar)
