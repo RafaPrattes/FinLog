@@ -5,179 +5,141 @@ import com.ucb.finlog.dto.CategoriaResumoDTO;
 import com.ucb.finlog.model.Categoria;
 import com.ucb.finlog.model.Movimentacao;
 import com.ucb.finlog.model.TipoMovimentacao;
+import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.repository.CategoriaRepository;
 import com.ucb.finlog.repository.MovimentacaoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ucb.finlog.repository.UsuarioRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 public class CategoriaService {
+    private final CategoriaRepository categoriaRepository;
+    private final MovimentacaoRepository movimentacaoRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    // ─────────────────────────────────────────────────────────
-    // ARMAZENAMENTO EM MEMÓRIA
-    // TODO: remover os campos abaixo quando o banco estiver pronto.
-    //       O @Autowired de CategoriaRepository e MovimentacaoRepository
-    //       já está preparado — basta descomentar e deletar os mapas.
-    // ─────────────────────────────────────────────────────────
-
-    private final Map<Long, Categoria>    memoriaCategoria    = new LinkedHashMap<>();
-    private final Map<Long, Movimentacao> memoriaMovimentacao = new LinkedHashMap<>();
-    private long proximoIdCategoria    = 1L;
-    private long proximoIdMovimentacao = 1L;
-
-    public List<CategoriaDTO> listarTodas() {
-        return memoriaCategoria.values().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+    public CategoriaService(
+            CategoriaRepository categoriaRepository,
+            MovimentacaoRepository movimentacaoRepository,
+            UsuarioRepository usuarioRepository
+    ) {
+        this.categoriaRepository = categoriaRepository;
+        this.movimentacaoRepository = movimentacaoRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
-    public CategoriaDTO buscarPorId(Long id) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) return null;
-        return toDTO(cat);
+    public List<CategoriaDTO> listarTodas(String emailUsuario) {
+        return categoriaRepository.findByUsuarioEmailOrderByNomeAsc(emailUsuario).stream()
+                .map(categoria -> CategoriaDTO.from(categoria, totalDaCategoria(categoria.getId(), emailUsuario)))
+                .toList();
     }
 
-    public CategoriaDTO criar(CategoriaDTO dto) {
-        String nome = dto.getNome() == null ? "" : dto.getNome().trim();
-        if (nome.isEmpty()) {
-            throw new IllegalArgumentException("O nome da categoria é obrigatório.");
-        }
-
-        boolean nomeRepetido = memoriaCategoria.values().stream()
-                .anyMatch(c -> c.getNome().equalsIgnoreCase(nome));
-        if (nomeRepetido) {
-            throw new IllegalArgumentException("Já existe uma categoria com este nome: " + nome);
-        }
-
-        Categoria cat = new Categoria();
-        cat.setId(proximoIdCategoria++);
-        cat.setNome(nome);
-        cat.setDescricao(dto.getDescricao());
-
-        memoriaCategoria.put(cat.getId(), cat);
-        return toDTO(cat);
+    public CategoriaDTO buscarPorId(Long id, String emailUsuario) {
+        Categoria categoria = buscarDoUsuario(id, emailUsuario);
+        return CategoriaDTO.from(categoria, totalDaCategoria(categoria.getId(), emailUsuario));
     }
 
-    public CategoriaDTO atualizar(Long id, CategoriaDTO dto) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) {
-            throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
+    public CategoriaDTO criar(CategoriaDTO dto, String emailUsuario) {
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario nao encontrado"));
+
+        String nome = normalizarNome(dto.getNome());
+        if (categoriaRepository.existsByNomeIgnoreCaseAndUsuarioEmail(nome, emailUsuario)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Categoria ja cadastrada");
         }
 
-        String novoNome = dto.getNome() == null ? "" : dto.getNome().trim();
-        if (novoNome.isEmpty()) {
-            throw new IllegalArgumentException("O nome da categoria é obrigatório.");
-        }
+        Categoria categoria = new Categoria();
+        categoria.setNome(nome);
+        categoria.setDescricao(dto.getDescricao());
+        categoria.setUsuario(usuario);
 
-        boolean nomeRepetido = memoriaCategoria.values().stream()
-                .anyMatch(c -> !c.getId().equals(id) && c.getNome().equalsIgnoreCase(novoNome));
-        if (nomeRepetido) {
-            throw new IllegalArgumentException("Já existe outra categoria com este nome: " + novoNome);
-        }
-
-        cat.setNome(novoNome);
-        cat.setDescricao(dto.getDescricao());
-        return toDTO(cat);
+        Categoria salva = categoriaRepository.save(categoria);
+        return CategoriaDTO.from(salva, totalDaCategoria(salva.getId(), emailUsuario));
     }
 
-    public void deletar(Long id) {
-        if (!memoriaCategoria.containsKey(id)) {
-            throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
-        }
+    public CategoriaDTO atualizar(Long id, CategoriaDTO dto, String emailUsuario) {
+        Categoria categoria = buscarDoUsuario(id, emailUsuario);
+        String nome = normalizarNome(dto.getNome());
 
-        boolean temMovimentacoes = memoriaMovimentacao.values().stream()
-                .anyMatch(m -> id.equals(m.getCategoriaId()));
-        if (temMovimentacoes) {
-            throw new IllegalStateException(
-                "Não é possível excluir: existem movimentações vinculadas a esta categoria."
-            );
-        }
+        categoriaRepository.findByNomeIgnoreCaseAndUsuarioEmail(nome, emailUsuario)
+                .filter(existente -> !existente.getId().equals(id))
+                .ifPresent(existente -> {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Categoria ja cadastrada");
+                });
 
-        memoriaCategoria.remove(id);
+        categoria.setNome(nome);
+        categoria.setDescricao(dto.getDescricao());
 
+        Categoria salva = categoriaRepository.save(categoria);
+        return CategoriaDTO.from(salva, totalDaCategoria(salva.getId(), emailUsuario));
     }
 
-    public List<CategoriaResumoDTO> resumo() {
-        List<CategoriaResumoDTO> resultado = new ArrayList<>();
-
-        for (Categoria cat : memoriaCategoria.values()) {
-            List<Movimentacao> movs = memoriaMovimentacao.values().stream()
-                    .filter(m -> cat.getId().equals(m.getCategoriaId()))
-                    .collect(Collectors.toList());
-
-            CategoriaResumoDTO r = calcularResumo(cat, movs);
-            resultado.add(r);
-        }
-
-        resultado.sort(Comparator.comparing(CategoriaResumoDTO::getTotalDespesas).reversed());
-
-        return resultado;
-
+    public List<CategoriaResumoDTO> resumo(String emailUsuario) {
+        return categoriaRepository.findByUsuarioEmailOrderByNomeAsc(emailUsuario).stream()
+                .map(categoria -> resumoDaCategoria(categoria, emailUsuario))
+                .toList();
     }
 
-    public CategoriaResumoDTO resumoPorId(Long id) {
-        Categoria cat = memoriaCategoria.get(id);
-        if (cat == null) {
-            throw new IllegalArgumentException("Categoria não encontrada: id=" + id);
-        }
-
-        List<Movimentacao> movs = memoriaMovimentacao.values().stream()
-                .filter(m -> id.equals(m.getCategoriaId()))
-                .collect(Collectors.toList());
-
-        return calcularResumo(cat, movs);
+    public CategoriaResumoDTO resumoPorId(Long id, String emailUsuario) {
+        return resumoDaCategoria(buscarDoUsuario(id, emailUsuario), emailUsuario);
     }
 
-    public Movimentacao salvarMovimentacao(Movimentacao mov) {
-        if (mov.getId() == null) {
-            mov.setId(proximoIdMovimentacao++);
-        }
-        memoriaMovimentacao.put(mov.getId(), mov);
-        return mov;
+    public void deletar(Long id, String emailUsuario) {
+        Categoria categoria = buscarDoUsuario(id, emailUsuario);
 
+        if (movimentacaoRepository.existsByCategoriaIdAndUsuarioEmail(id, emailUsuario)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Categoria possui movimentacoes");
+        }
+
+        categoriaRepository.delete(categoria);
     }
 
-    private CategoriaResumoDTO calcularResumo(Categoria cat, List<Movimentacao> movs) {
-        BigDecimal totalReceitas = movs.stream()
-                .filter(m -> TipoMovimentacao.RECEITA.equals(m.getTipo()))
+    private Categoria buscarDoUsuario(Long id, String emailUsuario) {
+        return categoriaRepository.findByIdAndUsuarioEmail(id, emailUsuario)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria nao encontrada"));
+    }
+
+    private CategoriaResumoDTO resumoDaCategoria(Categoria categoria, String emailUsuario) {
+        List<Movimentacao> movimentacoes = movimentacaoRepository.findByCategoriaIdAndUsuarioEmail(
+                categoria.getId(),
+                emailUsuario
+        );
+
+        BigDecimal totalReceitas = totalPorTipo(movimentacoes, TipoMovimentacao.RECEITA);
+        BigDecimal totalDespesas = totalPorTipo(movimentacoes, TipoMovimentacao.DESPESA);
+
+        return new CategoriaResumoDTO(
+                categoria.getId(),
+                categoria.getNome(),
+                categoria.getDescricao(),
+                totalReceitas,
+                totalDespesas,
+                totalReceitas.subtract(totalDespesas)
+        );
+    }
+
+    private BigDecimal totalDaCategoria(Long categoriaId, String emailUsuario) {
+        return movimentacaoRepository.findByCategoriaIdAndUsuarioEmail(categoriaId, emailUsuario).stream()
                 .map(Movimentacao::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalDespesas = movs.stream()
-                .filter(m -> TipoMovimentacao.DESPESA.equals(m.getTipo()))
-                .map(Movimentacao::getValor)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        CategoriaResumoDTO r = new CategoriaResumoDTO();
-        r.setCategoriaId(cat.getId());
-        r.setCategoriaNome(cat.getNome());
-        r.setTotalMovimentacoes(movs.size());
-        r.setTotalReceitas(totalReceitas);
-        r.setTotalDespesas(totalDespesas);
-        r.setSaldo(totalReceitas.subtract(totalDespesas));
-        return r;
     }
 
-    private CategoriaDTO toDTO(Categoria cat) {
-        CategoriaDTO dto = new CategoriaDTO();
-        dto.setId(cat.getId());
-        dto.setNome(cat.getNome());
-        dto.setDescricao(cat.getDescricao());
-
-        long count = memoriaMovimentacao.values().stream()
-                .filter(m -> cat.getId().equals(m.getCategoriaId()))
-                .count();
-        BigDecimal total = memoriaMovimentacao.values().stream()
-                .filter(m -> cat.getId().equals(m.getCategoriaId()))
+    private BigDecimal totalPorTipo(List<Movimentacao> movimentacoes, TipoMovimentacao tipo) {
+        return movimentacoes.stream()
+                .filter(movimentacao -> tipo == movimentacao.getTipo())
                 .map(Movimentacao::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
-        dto.setTotalMovimentacoes((int) count);
-        dto.setTotalValor(total);
-        return dto;
+    private String normalizarNome(String nome) {
+        String nomeNormalizado = nome == null ? "" : nome.trim();
+        if (nomeNormalizado.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome da categoria e obrigatorio");
+        }
+        return nomeNormalizado;
     }
 }

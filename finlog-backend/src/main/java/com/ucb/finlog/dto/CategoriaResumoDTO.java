@@ -1,20 +1,17 @@
 package com.ucb.finlog.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import java.math.BigDecimal;
 
-/**
- * Resumo de gastos/receitas agrupados por categoria.
- * Retornado pelo endpoint GET /api/categorias/resumo
- */
 @Data
+@AllArgsConstructor
 public class CategoriaResumoDTO {
-
-    private Long categoriaId;
-    private String categoriaNome;
-
-    private int totalMovimentacoes;
+    private Long id;
+    private String nome;
+    private String descricao;
     private BigDecimal totalReceitas;
     private BigDecimal totalDespesas;
-    private BigDecimal saldo; // receitas - despesas
+    private BigDecimal saldo;
 }
