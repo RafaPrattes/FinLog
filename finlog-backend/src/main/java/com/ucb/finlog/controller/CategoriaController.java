@@ -1,10 +1,9 @@
 package com.ucb.finlog.controller;
 
-import com.ucb.finlog.dto.MovimentacaoRequest;
-import com.ucb.finlog.dto.MovimentacaoResponse;
+import com.ucb.finlog.dto.CategoriaDTO;
+import com.ucb.finlog.dto.CategoriaResumoDTO;
 import com.ucb.finlog.security.UsuarioAutenticado;
-import com.ucb.finlog.service.MovimentacaoService;
-import jakarta.validation.Valid;
+import com.ucb.finlog.service.CategoriaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,47 +19,52 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/movimentacoes")
-public class MovimentacaoController {
-    private final MovimentacaoService service;
+@RequestMapping("/api/categorias")
+public class CategoriaController {
+    private final CategoriaService service;
 
-    public MovimentacaoController(MovimentacaoService service) {
+    public CategoriaController(CategoriaService service) {
         this.service = service;
     }
 
     @GetMapping
-    public List<MovimentacaoResponse> listar(@AuthenticationPrincipal UsuarioAutenticado usuario) {
-        return service.listarTodas(usuario.email()).stream()
-                .map(MovimentacaoResponse::from)
-                .toList();
+    public List<CategoriaDTO> listar(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return service.listarTodas(usuario.email());
     }
 
     @GetMapping("/{id}")
-    public MovimentacaoResponse buscar(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado usuario) {
-        return MovimentacaoResponse.from(service.buscarPorId(id, usuario.email()));
+    public CategoriaDTO buscar(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return service.buscarPorId(id, usuario.email());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MovimentacaoResponse salvar(
-            @Valid @RequestBody MovimentacaoRequest request,
-            @AuthenticationPrincipal UsuarioAutenticado usuario
-    ) {
-        return MovimentacaoResponse.from(service.salvar(request, usuario.email()));
+    public CategoriaDTO criar(@RequestBody CategoriaDTO dto, @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return service.criar(dto, usuario.email());
     }
 
     @PutMapping("/{id}")
-    public MovimentacaoResponse atualizar(
+    public CategoriaDTO atualizar(
             @PathVariable Long id,
-            @Valid @RequestBody MovimentacaoRequest request,
+            @RequestBody CategoriaDTO dto,
             @AuthenticationPrincipal UsuarioAutenticado usuario
     ) {
-        return MovimentacaoResponse.from(service.atualizar(id, request, usuario.email()));
+        return service.atualizar(id, dto, usuario.email());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletar(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado usuario) {
         service.deletar(id, usuario.email());
+    }
+
+    @GetMapping("/resumo")
+    public List<CategoriaResumoDTO> resumo(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return service.resumo(usuario.email());
+    }
+
+    @GetMapping("/{id}/resumo")
+    public CategoriaResumoDTO resumoPorId(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return service.resumoPorId(id, usuario.email());
     }
 }

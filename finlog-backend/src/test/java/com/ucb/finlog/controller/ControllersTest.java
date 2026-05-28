@@ -3,8 +3,11 @@ package com.ucb.finlog.controller;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.LoginRequest;
+import com.ucb.finlog.dto.MovimentacaoRequest;
+import com.ucb.finlog.dto.MovimentacaoResponse;
 import com.ucb.finlog.dto.UsuarioResponse;
 import com.ucb.finlog.model.Movimentacao;
+import com.ucb.finlog.model.TipoMovimentacao;
 import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.AIService;
@@ -13,6 +16,8 @@ import com.ucb.finlog.service.MovimentacaoService;
 import com.ucb.finlog.service.UsuarioService;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -78,16 +83,33 @@ class ControllersTest {
         MovimentacaoService service = mock(MovimentacaoService.class);
         UsuarioAutenticado usuario = new UsuarioAutenticado(1L, "maria@email.com");
         Movimentacao movimentacao = new Movimentacao();
+        movimentacao.setId(10L);
+        movimentacao.setDescricao("Salario");
+        movimentacao.setValor(new BigDecimal("100.00"));
+        movimentacao.setData(LocalDate.of(2026, 5, 27));
+        movimentacao.setTipo(TipoMovimentacao.RECEITA);
+        MovimentacaoRequest request = new MovimentacaoRequest(
+                "Salario",
+                new BigDecimal("100.00"),
+                LocalDate.of(2026, 5, 27),
+                TipoMovimentacao.RECEITA,
+                null,
+                null
+        );
 
         when(service.listarTodas("maria@email.com")).thenReturn(List.of(movimentacao));
         when(service.buscarPorId(10L, "maria@email.com")).thenReturn(movimentacao);
-        when(service.salvar(movimentacao, "maria@email.com")).thenReturn(movimentacao);
+        when(service.salvar(request, "maria@email.com")).thenReturn(movimentacao);
+        when(service.atualizar(10L, request, "maria@email.com")).thenReturn(movimentacao);
 
         MovimentacaoController controller = new MovimentacaoController(service);
 
         assertEquals(1, controller.listar(usuario).size());
-        assertEquals(movimentacao, controller.buscar(10L, usuario));
-        assertEquals(movimentacao, controller.salvar(movimentacao, usuario));
+        assertMovimentacaoResponse(controller.buscar(10L, usuario));
+        assertMovimentacaoResponse(controller.salvar(request, usuario));
+        assertMovimentacaoResponse(controller.atualizar(10L, request, usuario));
+        controller.deletar(10L, usuario);
+        verify(service).deletar(10L, "maria@email.com");
     }
 
     @Test
@@ -104,5 +126,13 @@ class ControllersTest {
         usuario.setNome(nome);
         usuario.setEmail(email);
         return usuario;
+    }
+
+    private void assertMovimentacaoResponse(MovimentacaoResponse response) {
+        assertEquals(10L, response.id());
+        assertEquals("Salario", response.descricao());
+        assertEquals(new BigDecimal("100.00"), response.valor());
+        assertEquals(LocalDate.of(2026, 5, 27), response.data());
+        assertEquals(TipoMovimentacao.RECEITA, response.tipo());
     }
 }
