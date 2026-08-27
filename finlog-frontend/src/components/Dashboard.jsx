@@ -64,6 +64,21 @@ function DonutChart({ entTotal, saiTotal }) {
 }
 
 /* ══════════════════════════════
+   UTILS — Markdown
+══════════════════════════════ */
+function stripMarkdown(text) {
+  if (!text) return ''
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
+    .replace(/\*(.*?)\*/g, '$1')        // *itálico*
+    .replace(/#{1,6}\s*/g, '')          // ## títulos
+    .replace(/`(.*?)`/g, '$1')          // `código inline`
+    .replace(/^\s*[-*+]\s+/gm, '')      // listas com marcadores
+    .replace(/^\s*\d+\.\s+/gm, '')      // listas numeradas
+    .trim()
+}
+
+/* ══════════════════════════════
    CHATBOT
    Falta fazer ainda: integrar com backend (/api/chat)
 ══════════════════════════════ */
@@ -89,7 +104,7 @@ function ChatBot({ user }) {
     try {
       const { data } = await api.get('/ai/conselho')
       setMessages(prev => [...prev, { role: 'assistant', text: data }])
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
     } finally {
       setLoading(false)
@@ -101,7 +116,7 @@ function ChatBot({ user }) {
       <h2 className="page-title">Assistente IA</h2>
       <div className="chat-messages">
         {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+          <div key={i} className={`chat-bubble ${m.role}`}>{stripMarkdown(m.text)}</div>
         ))}
         {loading && <div className="chat-bubble assistant chat-typing">digitando…</div>}
         <div ref={bottomRef} />
@@ -134,12 +149,14 @@ function Dashboard({ user, onLogout }) {
   const [filterType, setFilterType] = useState('all')
   const [filterCat,  setFilterCat]  = useState('all')
 
+  const [categorias, setCategorias] = useState([])
+
   const [lancModal, setLancModal] = useState(false)
   const [lancType,  setLancType]  = useState('entrada')
-  const [lancForm,  setLancForm]  = useState({ desc: '', val: '', date: today(), cat: '' })
+  const [lancForm,  setLancForm]  = useState({ desc: '', val: '', date: today(), catId: '', catNomeNovo: '' })
 
   const [editLancModal, setEditLancModal] = useState(null)
-  const [editLancForm,  setEditLancForm]  = useState({ desc: '', val: '', date: '', cat: '' })
+  const [editLancForm,  setEditLancForm]  = useState({ desc: '', val: '', date: '', catId: '', catNomeNovo: '' })
 
   const [metaModal,     setMetaModal]     = useState(false)
   const [editingMetaId, setEditingMetaId] = useState(null)
@@ -151,18 +168,27 @@ function Dashboard({ user, onLogout }) {
   const [toastVisible, setToastVisible] = useState(false)
   const toastTimer = useRef(null)
 
-  /* ══ Carregar movimentações do usuário logado ══ */
+  /* ══ Carregar movimentações e categorias do usuário logado ══ */
   useEffect(() => {
+    async function fetchCategorias() {
+      try {
+        const { data } = await api.get('/categorias')
+        setCategorias(data)
+      } catch (err) {
+        console.error('Erro ao carregar categorias:', err)
+      }
+    }
     async function fetchMovimentacoes() {
       try {
         const { data } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
         const mapped = data.map(m => ({
-          id:   m.id,
-          type: m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-          desc: m.descricao,
-          val:  parseFloat(m.valor) || 0,
-          date: m.data,
-          cat:  m.categoria?.nome || 'Outros',
+          id:    m.id,
+          type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
+          desc:  m.descricao,
+          val:   parseFloat(m.valor) || 0,
+          date:  m.data,
+          cat:   m.categoria?.nome || 'Outros',
+          catId: m.categoria?.id ?? null,
         }))
         setTxns(mapped)
       } catch (err) {
@@ -171,7 +197,10 @@ function Dashboard({ user, onLogout }) {
         setLoading(false)
       }
     }
-    if (user?.id) fetchMovimentacoes()
+    if (user?.id) {
+      fetchCategorias()
+      fetchMovimentacoes()
+    }
   }, [user])
 
   /* ══ Valores calculados ══ */
@@ -201,40 +230,56 @@ function Dashboard({ user, onLogout }) {
   /* ══ Lançamento ══ */
   function openLanc(type) {
     setLancType(type)
-    setLancForm({ desc: '', val: '', date: today(), cat: '' })
+    setLancForm({ desc: '', val: '', date: today(), catId: '', catNomeNovo: '' })
     setLancModal(true)
   }
 
   async function saveLanc() {
-    const desc = lancForm.desc.trim()
-    const val  = parseFloat(lancForm.val)
-    const date = lancForm.date
-    const cat  = lancForm.cat.trim() || 'Outros'
+    const desc        = lancForm.desc.trim()
+    const val         = parseFloat(lancForm.val)
+    const date        = lancForm.date
+    const novaCatNome = lancForm.catNomeNovo.trim()
 
     if (!desc)                  { showToast('Informe a descrição.');     return }
     if (isNaN(val) || val <= 0) { showToast('Informe um valor válido.'); return }
     if (!date)                  { showToast('Informe a data.');           return }
+    if (lancForm.catId === '__nova__' && !novaCatNome) {
+      showToast('Informe o nome da nova categoria.')
+      return
+    }
 
     try {
+      const categoriaPayload =
+        lancForm.catId === '__nova__' ? { categoria: { nome: novaCatNome } } :
+        lancForm.catId               ? { categoriaId: Number(lancForm.catId) } :
+        { categoria: { nome: 'Outros' } }
+
       const payload = {
         descricao: desc,
         valor:     val,
         data:      date,
         tipo:      lancType === 'entrada' ? 'RECEITA' : 'DESPESA',
         usuario:   { id: user.id },
+        ...categoriaPayload,
       }
-      const { data } = await api.post('/movimentacoes', payload)
-      const nova = {
-        id:   data.id,
-        type: lancType,
-        desc: data.descricao,
-        val:  parseFloat(data.valor),
-        date: data.data,
-        cat:  data.categoria?.nome || cat,
-      }
-      setTxns(prev => [...prev, nova])
+      await api.post('/movimentacoes', payload)
       setLancModal(false)
       showToast(lancType === 'entrada' ? 'Receita registrada!' : 'Despesa registrada!')
+      // Recarrega lista do backend para garantir IDs corretos (necessário para deletar)
+      const { data: updated } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
+      setTxns(updated.map(m => ({
+        id:    m.id,
+        type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
+        desc:  m.descricao,
+        val:   parseFloat(m.valor) || 0,
+        date:  m.data,
+        cat:   m.categoria?.nome || 'Outros',
+        catId: m.categoria?.id ?? null,
+      })))
+      if (lancForm.catId === '__nova__') {
+        const { data: cats } = await api.get('/categorias')
+        setCategorias(cats)
+      }
     } catch (err) {
       console.error('Erro ao salvar lançamento:', err)
       showToast('Erro ao salvar. Tente novamente.')
@@ -244,32 +289,53 @@ function Dashboard({ user, onLogout }) {
   /* ══ Editar lançamento ══ */
   function openEditLanc(t) {
     setEditLancModal(t)
-    setEditLancForm({ desc: t.desc, val: t.val, date: t.date, cat: t.cat })
+    setEditLancForm({ desc: t.desc, val: t.val, date: t.date, catId: t.catId ? String(t.catId) : '', catNomeNovo: '' })
   }
 
   async function saveEditLanc() {
-    const desc = editLancForm.desc.trim()
-    const val  = parseFloat(editLancForm.val)
-    const date = editLancForm.date
-    const cat  = editLancForm.cat.trim() || 'Outros'
+    const desc        = editLancForm.desc.trim()
+    const val         = parseFloat(editLancForm.val)
+    const date        = editLancForm.date
+    const novaCatNome = editLancForm.catNomeNovo.trim()
 
     if (!desc)                  { showToast('Informe a descrição.');     return }
     if (isNaN(val) || val <= 0) { showToast('Informe um valor válido.'); return }
+    if (editLancForm.catId === '__nova__' && !novaCatNome) {
+      showToast('Informe o nome da nova categoria.')
+      return
+    }
 
     try {
+      const categoriaPayload =
+        editLancForm.catId === '__nova__' ? { categoria: { nome: novaCatNome } } :
+        editLancForm.catId               ? { categoriaId: Number(editLancForm.catId) } :
+        { categoria: { nome: 'Outros' } }
+
       const payload = {
         descricao: desc,
         valor:     val,
         data:      date,
         tipo:      editLancModal.type === 'entrada' ? 'RECEITA' : 'DESPESA',
         usuario:   { id: user.id },
+        ...categoriaPayload,
       }
-      await api.put(`/movimentacoes/${editLancModal.id}`, payload)
+      const { data: updated } = await api.put(`/movimentacoes/${editLancModal.id}`, payload)
       setTxns(prev =>
-        prev.map(t => t.id === editLancModal.id ? { ...t, desc, val, date, cat } : t)
+        prev.map(t => t.id === editLancModal.id ? {
+          ...t,
+          desc,
+          val,
+          date,
+          cat:   updated.categoria?.nome || 'Outros',
+          catId: updated.categoria?.id ?? null,
+        } : t)
       )
       setEditLancModal(null)
       showToast('Lançamento atualizado!')
+      if (editLancForm.catId === '__nova__') {
+        const { data: cats } = await api.get('/categorias')
+        setCategorias(cats)
+      }
     } catch (err) {
       console.error('Erro ao editar lançamento:', err)
       showToast('Erro ao editar. Tente novamente.')
@@ -545,8 +611,18 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="m-row">
               <span className="m-lbl">Categoria:</span>
-              <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.cat} onChange={e => setLancForm(f => ({ ...f, cat: e.target.value }))} />
+              <select className="m-inp" value={lancForm.catId} onChange={e => setLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
+                <option value="">Selecione uma categoria</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                <option value="__nova__">+ Nova categoria…</option>
+              </select>
             </div>
+            {lancForm.catId === '__nova__' && (
+              <div className="m-row">
+                <span className="m-lbl">Nova categoria:</span>
+                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
+              </div>
+            )}
             <button className="m-btn" onClick={saveLanc}>Confirmar</button>
           </div>
         </div>
@@ -572,8 +648,18 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="m-row">
               <span className="m-lbl">Categoria:</span>
-              <input className="m-inp" type="text" value={editLancForm.cat} onChange={e => setEditLancForm(f => ({ ...f, cat: e.target.value }))} />
+              <select className="m-inp" value={editLancForm.catId} onChange={e => setEditLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
+                <option value="">Selecione uma categoria</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                <option value="__nova__">+ Nova categoria…</option>
+              </select>
             </div>
+            {editLancForm.catId === '__nova__' && (
+              <div className="m-row">
+                <span className="m-lbl">Nova categoria:</span>
+                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
+              </div>
+            )}
             <button className="m-btn" onClick={saveEditLanc}>Salvar alterações</button>
           </div>
         </div>

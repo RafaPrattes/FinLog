@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,9 +42,9 @@ public class AIService {
     public String obterConselhoIA(String emailUsuario) {
         List<Movimentacao> dados = repository.findByUsuarioEmail(emailUsuario);
 
-        String resumoFinanceiro = dados.stream()
-                .map(m -> m.getTipo() + ": " + m.getDescricao() + " R$" + m.getValor())
-                .collect(Collectors.joining(", "));
+        if (dados.isEmpty()) {
+            return "Comece a registrar suas transacoes para receber recomendacoes personalizadas!";
+        }
 
         BigDecimal totalReceitas = dados.stream()
                 .filter(m -> m.getTipo() == TipoMovimentacao.RECEITA)
@@ -57,14 +58,46 @@ public class AIService {
 
         BigDecimal saldo = totalReceitas.subtract(totalDespesas);
 
-        // Observação: a lógica de "maior categoria de gasto" (presente na branch
-        // Ultima-do-Teo) depende do modelo Categoria, que ainda não existe no master.
-        // Será incorporada automaticamente quando o merge trouxer esse modelo.
-        String prompt = "Aja como um mentor financeiro para o app FinLog. " +
-                "Saldo atual: R$" + saldo + ". Total de receitas: R$" + totalReceitas +
-                ". Total de despesas: R$" + totalDespesas + ". " +
-                "Analise estas transacoes: " + resumoFinanceiro +
-                ". De um conselho curto e motivador de no maximo 20 palavras.";
+        Map<String, BigDecimal> gastosPorCategoria = dados.stream()
+                .filter(m -> m.getTipo() == TipoMovimentacao.DESPESA)
+                .collect(Collectors.groupingBy(
+                        m -> m.getCategoria() != null ? m.getCategoria().getNome() : "Sem categoria",
+                        Collectors.reducing(BigDecimal.ZERO, Movimentacao::getValor, BigDecimal::add)
+                ));
+
+        String categoriaComMaiorGasto = gastosPorCategoria.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("gastos gerais");
+
+        BigDecimal maiorGasto = gastosPorCategoria.values().stream()
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        String resumoFinanceiro = String.format(
+                "Receitas: R$%.2f | Despesas: R$%.2f | Saldo: R$%.2f | Maior gasto em %s: R$%.2f",
+                totalReceitas,
+                totalDespesas,
+                saldo,
+                categoriaComMaiorGasto,
+                maiorGasto
+        );
+
+        String listaUltimasTransacoes = dados.stream()
+                .limit(5)
+                .map(m -> String.format(
+                        "%s (%s): R$%.2f",
+                        m.getDescricao(),
+                        m.getCategoria() != null ? m.getCategoria().getNome() : "Geral",
+                        m.getValor()
+                ))
+                .collect(Collectors.joining(" | "));
+
+        String prompt = "Voce e um mentor financeiro do app FinLog. " +
+                "Analise este resumo: " + resumoFinanceiro + ". " +
+                "Ultimas transacoes: " + listaUltimasTransacoes + ". " +
+                "De um conselho pratico e motivador de no maximo 40 palavras, focando em reduzir gastos em " +
+                categoriaComMaiorGasto + " ou aproveitar melhor as receitas.";
 
         var request = new GeminiRequest(List.of(
                 new GeminiRequest.Content(List.of(
@@ -90,7 +123,7 @@ public class AIService {
         }
 
         if (response != null && !response.candidates().isEmpty()) {
-            return response.candidates().get(0).content().parts().get(0).text();
+            return response.candidates().getFirst().content().parts().getFirst().text();
         }
 
         return "Continue acompanhando seus gastos para um futuro melhor!";

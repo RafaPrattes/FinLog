@@ -9,7 +9,7 @@ services:
       FINLOG_DB_USERNAME: ${FINLOG_DB_USERNAME:-finlog}
       FINLOG_DB_PASSWORD: ${FINLOG_DB_PASSWORD:-finlog}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent}
+      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent}
       JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
       JPA_SHOW_SQL: ${JPA_SHOW_SQL:-false}
       APP_AUTH_TOKEN_SECRET: ${APP_AUTH_TOKEN_SECRET:-change-me-to-a-long-random-secret}
