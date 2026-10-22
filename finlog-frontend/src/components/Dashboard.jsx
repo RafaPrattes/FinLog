@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../service/api'
+import { mensagemErro } from '../service/errors'
 
 /* ══════════════════════════════
    UTILS
@@ -297,7 +298,7 @@ function Dashboard({ user, onLogout }) {
       }
     } catch (err) {
       console.error('Erro ao salvar lançamento:', err)
-      showToast('Erro ao salvar. Tente novamente.')
+      showToast(mensagemErro(err, 'Erro ao salvar. Tente novamente.'))
     } finally {
       setSalvando(false)
     }
@@ -357,7 +358,7 @@ function Dashboard({ user, onLogout }) {
       }
     } catch (err) {
       console.error('Erro ao editar lançamento:', err)
-      showToast('Erro ao editar. Tente novamente.')
+      showToast(mensagemErro(err, 'Erro ao editar. Tente novamente.'))
     } finally {
       setSalvando(false)
     }
@@ -373,7 +374,7 @@ function Dashboard({ user, onLogout }) {
           showToast('Lançamento excluído.')
         } catch (err) {
           console.error('Erro ao excluir lançamento:', err)
-          showToast('Erro ao excluir. Tente novamente.')
+          showToast(mensagemErro(err, 'Erro ao excluir. Tente novamente.'))
         }
       },
     })
@@ -413,7 +414,7 @@ function Dashboard({ user, onLogout }) {
       setMetaModal(false)
     } catch (err) {
       console.error('Erro ao salvar meta:', err)
-      showToast('Erro ao salvar meta. Tente novamente.')
+      showToast(mensagemErro(err, 'Erro ao salvar meta. Tente novamente.'))
     } finally {
       setSalvando(false)
     }
@@ -429,7 +430,7 @@ function Dashboard({ user, onLogout }) {
           showToast('Meta excluída.')
         } catch (err) {
           console.error('Erro ao excluir meta:', err)
-          showToast('Erro ao excluir meta. Tente novamente.')
+          showToast(mensagemErro(err, 'Erro ao excluir meta. Tente novamente.'))
         }
       },
     })

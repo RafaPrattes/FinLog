@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import api from '../service/api'
+import { mensagemErro } from '../service/errors'
 
 function Register({ goToLogin }) {
   const [name,            setName]            = useState('')
@@ -41,8 +42,7 @@ function Register({ goToLogin }) {
       await api.post('/cadastro', { nome: n, email: em, senha: p })
       goToLogin()
     } catch (err) {
-      const msg = err.response?.data || 'Erro ao cadastrar. Tente novamente.'
-      setError(typeof msg === 'string' ? msg : 'Erro ao cadastrar. Tente novamente.')
+      setError(mensagemErro(err, 'Erro ao cadastrar. Tente novamente.'))
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import api from '../service/api'
+import { mensagemErro } from '../service/errors'
 
 function Login({ aviso = '', goToRegister, onLogin }) {
   const [userInput, setUserInput] = useState('')
@@ -28,10 +29,15 @@ function Login({ aviso = '', goToRegister, onLogin }) {
       setLoading(true)
       const { data } = await api.post('/auth/login', { email: u, senha: p })
       onLogin(data)
-    } catch {
-      setError('Usuário ou senha inválidos.')
-      setUserErr(true)
-      setPassErr(true)
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 401) {
+        setError('Usuário ou senha inválidos.')
+        setUserErr(true)
+        setPassErr(true)
+      } else {
+        setError(mensagemErro(err, 'Não foi possível entrar. Tente novamente.'))
+      }
     } finally {
       setLoading(false)
     }
