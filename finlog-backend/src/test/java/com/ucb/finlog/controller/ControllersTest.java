@@ -65,16 +65,14 @@ class ControllersTest {
     }
 
     @Test
-    void usuarioControllerDeveListarEExibirPerfil() {
+    void usuarioControllerDeveExibirPerfil() {
         UsuarioService service = mock(UsuarioService.class);
         Usuario usuario = usuario(1L, "Maria", "maria@email.com");
 
-        when(service.listarTodos()).thenReturn(List.of(usuario));
         when(service.buscarPorEmail("maria@email.com")).thenReturn(usuario);
 
         UsuarioController controller = new UsuarioController(service);
 
-        assertEquals(1, controller.listar().size());
         assertEquals("maria@email.com", controller.perfil(new UsuarioAutenticado(1L, "maria@email.com")).email());
     }
 

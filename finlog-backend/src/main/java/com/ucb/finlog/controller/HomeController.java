@@ -17,7 +17,6 @@ public class HomeController {
                         "POST /api/auth/login"
                 ),
                 "endpointsAutenticados", List.of(
-                        "GET /api/usuarios",
                         "GET /api/usuarios/me",
                         "GET /api/movimentacoes",
                         "POST /api/movimentacoes",

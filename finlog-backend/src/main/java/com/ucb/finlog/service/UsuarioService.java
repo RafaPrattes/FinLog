@@ -8,8 +8,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 @Service
 public class UsuarioService {
     private final UsuarioRepository repository;
@@ -38,10 +36,6 @@ public class UsuarioService {
     public Usuario buscarPorEmail(String email) {
         return repository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
-    }
-
-    public List<Usuario> listarTodos() {
-        return repository.findAll();
     }
 
     private void validarCadastro(CadastroUsuarioRequest request) {

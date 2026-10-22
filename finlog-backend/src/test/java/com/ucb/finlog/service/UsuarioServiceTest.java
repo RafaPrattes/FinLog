@@ -129,14 +129,4 @@ class UsuarioServiceTest {
         assertEquals(404, exception.getStatusCode().value());
         assertEquals("Usuário não encontrado", exception.getReason());
     }
-
-    @Test
-    void deveListarUsuarios() {
-        Usuario usuario = new Usuario();
-        usuario.setEmail("maria@email.com");
-
-        when(repository.findAll()).thenReturn(List.of(usuario));
-
-        assertEquals(1, service.listarTodos().size());
-    }
 }
