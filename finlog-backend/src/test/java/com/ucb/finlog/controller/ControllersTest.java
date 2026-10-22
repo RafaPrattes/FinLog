@@ -1,5 +1,6 @@
 package com.ucb.finlog.controller;
 
+import com.ucb.finlog.dto.AIAdviceResponse;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.CategoriaDTO;
@@ -178,7 +179,10 @@ class ControllersTest {
         AIService service = mock(AIService.class);
         when(service.obterConselhoIA("maria@email.com")).thenReturn("Poupe mais.");
 
-        assertEquals("Poupe mais.", new AIController(service).pegarConselho(new UsuarioAutenticado(1L, "maria@email.com")));
+        assertEquals(
+                new AIAdviceResponse("Poupe mais."),
+                new AIController(service).pegarConselho(new UsuarioAutenticado(1L, "maria@email.com"))
+        );
     }
 
     @Test

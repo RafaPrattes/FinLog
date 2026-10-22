@@ -1,5 +1,6 @@
 package com.ucb.finlog.controller;
 
+import com.ucb.finlog.dto.AIAdviceResponse;
 import com.ucb.finlog.dto.ChatRequest;
 import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.security.UsuarioAutenticado;
@@ -22,8 +23,8 @@ public class AIController {
     }
 
     @GetMapping("/conselho")
-    public String pegarConselho(@AuthenticationPrincipal UsuarioAutenticado usuario) {
-        return aiService.obterConselhoIA(usuario.email());
+    public AIAdviceResponse pegarConselho(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return new AIAdviceResponse(aiService.obterConselhoIA(usuario.email()));
     }
 
     @PostMapping("/chat")
