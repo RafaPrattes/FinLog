@@ -27,6 +27,16 @@ function App() {
     setScreen('login')
   }, [])
 
+  /* Saída pedida pela pessoa: invalida o token no backend antes de descartá-lo */
+  async function handleUserLogout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      /* Mesmo que a API falhe, a sessão local é encerrada */
+    }
+    handleLogout()
+  }
+
   /* Sessão expirada ou token inválido: volta para o login */
   useEffect(() => {
     setOnUnauthorized(() => handleLogout('Sua sessão expirou. Entre novamente.'))
@@ -67,7 +77,7 @@ function App() {
       {screen === 'dashboard' && (
         <Dashboard
           user={currentUser}
-          onLogout={() => handleLogout()}
+          onLogout={handleUserLogout}
         />
       )}
     </>

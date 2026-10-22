@@ -24,8 +24,9 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    const isLogin = error.config?.url?.includes('/auth/login')
-    if (error.response?.status === 401 && !isLogin && onUnauthorized) {
+    const url = error.config?.url || ''
+    const isAuth = url.includes('/auth/login') || url.includes('/auth/logout')
+    if (error.response?.status === 401 && !isAuth && onUnauthorized) {
       onUnauthorized()
     }
     return Promise.reject(error)

@@ -431,7 +431,9 @@ function Dashboard({ user, onLogout }) {
   /* ══ Logout ══ */
   function confirmLogout() {
     setConfirmModal({
-      msg: 'Deseja encerrar a sessão?',
+      title:        'Encerrar sessão',
+      confirmLabel: 'Sair',
+      msg:          'Deseja encerrar a sessão?',
       cb: () => {
         showToast('Sessão encerrada.')
         setTimeout(() => onLogout(), 400)
@@ -720,11 +722,11 @@ function Dashboard({ user, onLogout }) {
       {confirmModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setConfirmModal(null) }}>
           <div className="modal narrow">
-            <div className="m-title" style={{ fontSize: '19px' }}>Confirmar exclusão</div>
+            <div className="m-title" style={{ fontSize: '19px' }}>{confirmModal.title || 'Confirmar exclusão'}</div>
             <p className="conf-msg">{confirmModal.msg}</p>
             <div className="conf-btns">
               <button className="btn-cancel" onClick={() => setConfirmModal(null)}>Cancelar</button>
-              <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>Excluir</button>
+              <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>{confirmModal.confirmLabel || 'Excluir'}</button>
             </div>
           </div>
         </div>
