@@ -22,6 +22,17 @@ function fmtDate(d) {
 function mapMeta(m) {
   return { id: m.id, desc: m.descricao, val: parseFloat(m.valor) || 0 }
 }
+function mapMovimentacao(m) {
+  return {
+    id:    m.id,
+    type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
+    desc:  m.descricao,
+    val:   parseFloat(m.valor) || 0,
+    date:  m.data,
+    cat:   m.categoria?.nome || 'Outros',
+    catId: m.categoria?.id ?? null,
+  }
+}
 
 /* ══════════════════════════════
    DONUT CHART
@@ -185,17 +196,8 @@ function Dashboard({ user, onLogout }) {
     }
     async function fetchMovimentacoes() {
       try {
-        const { data } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
-        const mapped = data.map(m => ({
-          id:    m.id,
-          type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-          desc:  m.descricao,
-          val:   parseFloat(m.valor) || 0,
-          date:  m.data,
-          cat:   m.categoria?.nome || 'Outros',
-          catId: m.categoria?.id ?? null,
-        }))
-        setTxns(mapped)
+        const { data } = await api.get('/movimentacoes')
+        setTxns(data.map(mapMovimentacao))
       } catch (err) {
         console.error('Erro ao carregar movimentações:', err)
       } finally {
@@ -275,23 +277,14 @@ function Dashboard({ user, onLogout }) {
         valor:     val,
         data:      date,
         tipo:      lancType === 'entrada' ? 'RECEITA' : 'DESPESA',
-        usuario:   { id: user.id },
         ...categoriaPayload,
       }
       await api.post('/movimentacoes', payload)
       setLancModal(false)
       showToast(lancType === 'entrada' ? 'Receita registrada!' : 'Despesa registrada!')
       // Recarrega lista do backend para garantir IDs corretos (necessário para deletar)
-      const { data: updated } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
-      setTxns(updated.map(m => ({
-        id:    m.id,
-        type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-        desc:  m.descricao,
-        val:   parseFloat(m.valor) || 0,
-        date:  m.data,
-        cat:   m.categoria?.nome || 'Outros',
-        catId: m.categoria?.id ?? null,
-      })))
+      const { data: updated } = await api.get('/movimentacoes')
+      setTxns(updated.map(mapMovimentacao))
       if (lancForm.catId === '__nova__') {
         const { data: cats } = await api.get('/categorias')
         setCategorias(cats)
@@ -336,7 +329,6 @@ function Dashboard({ user, onLogout }) {
         valor:     val,
         data:      date,
         tipo:      editLancModal.type === 'entrada' ? 'RECEITA' : 'DESPESA',
-        usuario:   { id: user.id },
         ...categoriaPayload,
       }
       const { data: updated } = await api.put(`/movimentacoes/${editLancModal.id}`, payload)
