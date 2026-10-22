@@ -3,15 +3,19 @@ package com.ucb.finlog.controller;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.LoginRequest;
+import com.ucb.finlog.dto.MetaRequest;
+import com.ucb.finlog.dto.MetaResponse;
 import com.ucb.finlog.dto.MovimentacaoRequest;
 import com.ucb.finlog.dto.MovimentacaoResponse;
 import com.ucb.finlog.dto.UsuarioResponse;
+import com.ucb.finlog.model.Meta;
 import com.ucb.finlog.model.Movimentacao;
 import com.ucb.finlog.model.TipoMovimentacao;
 import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.AIService;
 import com.ucb.finlog.service.AuthService;
+import com.ucb.finlog.service.MetaService;
 import com.ucb.finlog.service.MovimentacaoService;
 import com.ucb.finlog.service.UsuarioService;
 import org.junit.jupiter.api.Test;
@@ -108,6 +112,29 @@ class ControllersTest {
         assertMovimentacaoResponse(controller.atualizar(10L, request, usuario));
         controller.deletar(10L, usuario);
         verify(service).deletar(10L, "maria@email.com");
+    }
+
+    @Test
+    void metaControllerDeveDelegarOperacoes() {
+        MetaService service = mock(MetaService.class);
+        UsuarioAutenticado usuario = new UsuarioAutenticado(1L, "maria@email.com");
+        Meta meta = new Meta();
+        meta.setId(5L);
+        meta.setDescricao("Viagem");
+        meta.setValor(new BigDecimal("1500.00"));
+        MetaRequest request = new MetaRequest("Viagem", new BigDecimal("1500.00"));
+
+        when(service.listar("maria@email.com")).thenReturn(List.of(meta));
+        when(service.criar(request, "maria@email.com")).thenReturn(meta);
+        when(service.atualizar(5L, request, "maria@email.com")).thenReturn(meta);
+
+        MetaController controller = new MetaController(service);
+
+        assertEquals(List.of(new MetaResponse(5L, "Viagem", new BigDecimal("1500.00"))), controller.listar(usuario));
+        assertEquals("Viagem", controller.criar(request, usuario).descricao());
+        assertEquals(5L, controller.atualizar(5L, request, usuario).id());
+        controller.deletar(5L, usuario);
+        verify(service).deletar(5L, "maria@email.com");
     }
 
     @Test

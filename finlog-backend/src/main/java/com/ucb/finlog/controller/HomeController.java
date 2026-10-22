@@ -20,6 +20,8 @@ public class HomeController {
                         "GET /api/usuarios/me",
                         "GET /api/movimentacoes",
                         "POST /api/movimentacoes",
+                        "GET /api/metas",
+                        "POST /api/metas",
                         "GET /api/ai/conselho"
                 )
         );

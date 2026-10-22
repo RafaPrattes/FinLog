@@ -18,6 +18,9 @@ function fmtDate(d) {
   const [y, m, day] = d.split('-')
   return `${day}/${m}/${y}`
 }
+function mapMeta(m) {
+  return { id: m.id, desc: m.descricao, val: parseFloat(m.valor) || 0 }
+}
 
 /* ══════════════════════════════
    DONUT CHART
@@ -198,9 +201,18 @@ function Dashboard({ user, onLogout }) {
         setLoading(false)
       }
     }
+    async function fetchMetas() {
+      try {
+        const { data } = await api.get('/metas')
+        setMetas(data.map(mapMeta))
+      } catch (err) {
+        console.error('Erro ao carregar metas:', err)
+      }
+    }
     if (user?.id) {
       fetchCategorias()
       fetchMovimentacoes()
+      fetchMetas()
     }
   }, [user])
 
@@ -367,7 +379,7 @@ function Dashboard({ user, onLogout }) {
     })
   }
 
-  /* ══ Metas (em memória) ══ */
+  /* ══ Metas ══ */
   function openMetaModal(id) {
     setEditingMetaId(id)
     if (id) {
@@ -379,28 +391,46 @@ function Dashboard({ user, onLogout }) {
     setMetaModal(true)
   }
 
-  function saveMeta() {
+  async function saveMeta() {
     const desc = metaForm.desc.trim()
     const val  = parseFloat(metaForm.val)
     if (!desc)                  { showToast('Informe a descrição.');     return }
     if (isNaN(val) || val <= 0) { showToast('Informe um valor válido.'); return }
+    if (salvando) return
 
-    if (editingMetaId) {
-      setMetas(prev => prev.map(m => m.id === editingMetaId ? { ...m, desc, val } : m))
-      showToast('Meta atualizada!')
-    } else {
-      setMetas(prev => [...prev, { id: Date.now(), desc, val }])
-      showToast('Meta adicionada!')
+    setSalvando(true)
+    try {
+      const payload = { descricao: desc, valor: val }
+      if (editingMetaId) {
+        const { data } = await api.put(`/metas/${editingMetaId}`, payload)
+        setMetas(prev => prev.map(m => m.id === editingMetaId ? mapMeta(data) : m))
+        showToast('Meta atualizada!')
+      } else {
+        const { data } = await api.post('/metas', payload)
+        setMetas(prev => [...prev, mapMeta(data)])
+        showToast('Meta adicionada!')
+      }
+      setMetaModal(false)
+    } catch (err) {
+      console.error('Erro ao salvar meta:', err)
+      showToast('Erro ao salvar meta. Tente novamente.')
+    } finally {
+      setSalvando(false)
     }
-    setMetaModal(false)
   }
 
   function delMeta(id) {
     setConfirmModal({
       msg: 'Deseja excluir esta meta permanentemente?',
-      cb: () => {
-        setMetas(prev => prev.filter(m => m.id !== id))
-        showToast('Meta excluída.')
+      cb: async () => {
+        try {
+          await api.delete(`/metas/${id}`)
+          setMetas(prev => prev.filter(m => m.id !== id))
+          showToast('Meta excluída.')
+        } catch (err) {
+          console.error('Erro ao excluir meta:', err)
+          showToast('Erro ao excluir meta. Tente novamente.')
+        }
       },
     })
   }
@@ -688,7 +718,7 @@ function Dashboard({ user, onLogout }) {
               <span className="m-lbl">Valor:</span>
               <input className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
             </div>
-            <button className="m-btn" onClick={saveMeta}>Confirmar</button>
+            <button className="m-btn" onClick={saveMeta} disabled={salvando}>Confirmar</button>
           </div>
         </div>
       )}
