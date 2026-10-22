@@ -50,6 +50,7 @@ class ApiExceptionHandlerTest {
         assertResponseStatus(HttpStatus.NOT_FOUND, "Nao encontrado");
         assertResponseStatus(HttpStatus.CONFLICT, "Conflito");
         assertResponseStatus(HttpStatus.METHOD_NOT_ALLOWED, "Metodo nao permitido");
+        assertResponseStatus(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas");
         assertResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno do servidor");
     }
 
