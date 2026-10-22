@@ -45,6 +45,11 @@ class ControllersTest {
 
         assertEquals("FinLog backend em execucao", response.get("status"));
         assertTrue(((List<?>) response.get("endpointsPublicos")).contains("POST /api/cadastro"));
+        List<?> autenticados = (List<?>) response.get("endpointsAutenticados");
+        assertTrue(autenticados.contains("POST /api/auth/logout"));
+        assertTrue(autenticados.contains("GET /api/categorias/resumo"));
+        assertTrue(autenticados.contains("DELETE /api/movimentacoes/{id}"));
+        assertTrue(autenticados.contains("PUT /api/metas/{id}"));
     }
 
     @Test

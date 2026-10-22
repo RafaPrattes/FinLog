@@ -13,8 +13,12 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+RUN groupadd --system finlog && useradd --system --gid finlog --no-create-home --shell /usr/sbin/nologin finlog
 
-EXPOSE 8888
+COPY --from=build --chown=finlog:finlog /app/target/*.jar app.jar
+
+USER finlog
+
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

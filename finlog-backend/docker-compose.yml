@@ -29,8 +29,10 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-finlog_db}
       MYSQL_USER: ${MYSQL_USER:-finlog}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-finlog}
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
+    # O MySQL nao e publicado no host por padrao: o backend acessa o banco pela rede interna do compose.
+    # Para conectar um cliente SQL local, descomente as duas linhas abaixo (porta definida em MYSQL_PORT).
+    # ports:
+    #   - "${MYSQL_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
