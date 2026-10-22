@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import api from '../service/api'
 
-function Login({ goToRegister, onLogin }) {
+function Login({ aviso = '', goToRegister, onLogin }) {
   const [userInput, setUserInput] = useState('')
   const [password,  setPassword]  = useState('')
-  const [error,     setError]     = useState('')
+  const [error,     setError]     = useState(aviso)
   const [userErr,   setUserErr]   = useState(false)
   const [passErr,   setPassErr]   = useState(false)
   const [loading,   setLoading]   = useState(false)
