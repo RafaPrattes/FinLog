@@ -115,6 +115,28 @@ class AIServiceTest {
     }
 
     @Test
+    void deveRetornarConselhoPadraoQuandoApiRetornaRespostaIncompleta() {
+        ReflectionTestUtils.setField(service, "apiKey", "chave");
+        ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
+
+        Movimentacao movimentacao = new Movimentacao();
+        movimentacao.setTipo(TipoMovimentacao.RECEITA);
+        movimentacao.setDescricao("Freelance");
+        movimentacao.setValor(BigDecimal.valueOf(1000));
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(movimentacao));
+        when(restTemplate.postForObject(eq("https://gemini.test"), any(), eq(GeminiResponse.class)))
+                .thenReturn(new GeminiResponse(null))
+                .thenReturn(new GeminiResponse(List.of(new GeminiResponse.Candidate(null))))
+                .thenReturn(new GeminiResponse(List.of(new GeminiResponse.Candidate(new GeminiResponse.Content(null)))))
+                .thenReturn(new GeminiResponse(List.of(new GeminiResponse.Candidate(new GeminiResponse.Content(List.of())))));
+
+        for (int i = 0; i < 4; i++) {
+            assertEquals("Continue acompanhando seus gastos para um futuro melhor!", service.obterConselhoIA("maria@email.com"));
+        }
+    }
+
+    @Test
     void deveRetornarMensagemAmigavelQuandoApiFalhaComErroHttp() {
         ReflectionTestUtils.setField(service, "apiKey", "chave");
         ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");

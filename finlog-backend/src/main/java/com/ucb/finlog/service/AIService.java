@@ -129,10 +129,23 @@ public class AIService {
             return "Erro ao conectar com a IA. Tente novamente.";
         }
 
-        if (response != null && !response.candidates().isEmpty()) {
-            return response.candidates().getFirst().content().parts().getFirst().text();
-        }
+        String texto = extrairTexto(response);
+        return texto != null ? texto : "Continue acompanhando seus gastos para um futuro melhor!";
+    }
 
-        return "Continue acompanhando seus gastos para um futuro melhor!";
+    private String extrairTexto(GeminiResponse response) {
+        if (response == null || response.candidates() == null || response.candidates().isEmpty()) {
+            return null;
+        }
+        GeminiResponse.Candidate candidato = response.candidates().getFirst();
+        if (candidato == null || candidato.content() == null
+                || candidato.content().parts() == null || candidato.content().parts().isEmpty()) {
+            return null;
+        }
+        GeminiResponse.Part parte = candidato.content().parts().getFirst();
+        if (parte == null || parte.text() == null || parte.text().isBlank()) {
+            return null;
+        }
+        return parte.text();
     }
 }
