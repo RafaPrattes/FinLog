@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { setOnUnauthorized } from './service/api'
+import { lerToken, limparToken, salvarToken } from './service/session'
 
 import Login from './components/Login'
 import Register from './components/Register'
 import Dashboard from './components/Dashboard'
 
 function App() {
-  const [screen, setScreen] = useState(() => (localStorage.getItem('token') ? 'loading' : 'login'))
+  const [screen, setScreen] = useState(() => (lerToken() ? 'loading' : 'login'))
   const [currentUser, setCurrentUser] = useState(null)
   const [aviso, setAviso] = useState('')
 
-  function handleLogin(response) {
+  function handleLogin(response, lembrar = true) {
     const { usuario, token } = response
 
-    localStorage.setItem('token', token)
+    salvarToken(token, lembrar)
 
     setAviso('')
     setCurrentUser(usuario)
@@ -21,7 +22,7 @@ function App() {
   }
 
   const handleLogout = useCallback((mensagem = '') => {
-    localStorage.removeItem('token')
+    limparToken()
     setCurrentUser(null)
     setAviso(mensagem)
     setScreen('login')
