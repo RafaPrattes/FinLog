@@ -163,6 +163,7 @@ function Dashboard({ user, onLogout }) {
   const [metaForm,      setMetaForm]      = useState({ desc: '', val: '' })
 
   const [confirmModal, setConfirmModal] = useState(null)
+  const [salvando,     setSalvando]     = useState(false)
 
   const [toastMsg,     setToastMsg]     = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -247,7 +248,9 @@ function Dashboard({ user, onLogout }) {
       showToast('Informe o nome da nova categoria.')
       return
     }
+    if (salvando) return
 
+    setSalvando(true)
     try {
       const categoriaPayload =
         lancForm.catId === '__nova__' ? { categoria: { nome: novaCatNome } } :
@@ -283,6 +286,8 @@ function Dashboard({ user, onLogout }) {
     } catch (err) {
       console.error('Erro ao salvar lançamento:', err)
       showToast('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSalvando(false)
     }
   }
 
@@ -304,7 +309,9 @@ function Dashboard({ user, onLogout }) {
       showToast('Informe o nome da nova categoria.')
       return
     }
+    if (salvando) return
 
+    setSalvando(true)
     try {
       const categoriaPayload =
         editLancForm.catId === '__nova__' ? { categoria: { nome: novaCatNome } } :
@@ -339,6 +346,8 @@ function Dashboard({ user, onLogout }) {
     } catch (err) {
       console.error('Erro ao editar lançamento:', err)
       showToast('Erro ao editar. Tente novamente.')
+    } finally {
+      setSalvando(false)
     }
   }
 
@@ -623,7 +632,7 @@ function Dashboard({ user, onLogout }) {
                 <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
               </div>
             )}
-            <button className="m-btn" onClick={saveLanc}>Confirmar</button>
+            <button className="m-btn" onClick={saveLanc} disabled={salvando}>Confirmar</button>
           </div>
         </div>
       )}
@@ -660,7 +669,7 @@ function Dashboard({ user, onLogout }) {
                 <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
               </div>
             )}
-            <button className="m-btn" onClick={saveEditLanc}>Salvar alterações</button>
+            <button className="m-btn" onClick={saveEditLanc} disabled={salvando}>Salvar alterações</button>
           </div>
         </div>
       )}

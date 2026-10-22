@@ -10,11 +10,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "categorias")
+@Table(
+        name = "categorias",
+        uniqueConstraints = @UniqueConstraint(name = "uk_categoria_usuario_nome", columnNames = {"usuario_id", "nome"})
+)
 public class Categoria {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
