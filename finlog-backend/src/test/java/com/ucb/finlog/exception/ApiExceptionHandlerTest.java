@@ -2,6 +2,7 @@ package com.ucb.finlog.exception;
 
 import com.ucb.finlog.dto.ApiErrorResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -10,9 +11,12 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -131,6 +135,56 @@ class ApiExceptionHandlerTest {
 
         assertEquals(500, response.getStatusCode().value());
         assertEquals("Erro interno do servidor", response.getBody().message());
+    }
+
+    @Test
+    void deveRetornar404ParaRotaInexistente() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/nao-existe");
+
+        ResponseEntity<ApiErrorResponse> response = handler.handleNoResourceFound(mock(NoResourceFoundException.class), request);
+
+        assertEquals(404, response.getStatusCode().value());
+        assertEquals("Nao encontrado", response.getBody().error());
+        assertEquals("/api/nao-existe", response.getBody().path());
+    }
+
+    @Test
+    void deveRetornar400ParaParametroInvalido() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/movimentacoes/abc");
+
+        ResponseEntity<ApiErrorResponse> response = handler.handleParametroInvalido(
+                mock(MethodArgumentTypeMismatchException.class),
+                request
+        );
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("Parametro da requisicao invalido", response.getBody().message());
+    }
+
+    @Test
+    void deveRetornar415ParaContentTypeNaoSuportado() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/movimentacoes");
+
+        ResponseEntity<ApiErrorResponse> response = handler.handleMediaTypeNotSupported(
+                new HttpMediaTypeNotSupportedException("text/plain"),
+                request
+        );
+
+        assertEquals(415, response.getStatusCode().value());
+        assertEquals("Tipo de midia nao suportado", response.getBody().error());
+    }
+
+    @Test
+    void deveRetornar409ParaViolacaoDeIntegridade() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/categorias");
+
+        ResponseEntity<ApiErrorResponse> response = handler.handleDataIntegrityViolation(
+                new DataIntegrityViolationException("duplicado"),
+                request
+        );
+
+        assertEquals(409, response.getStatusCode().value());
+        assertEquals("Conflito", response.getBody().error());
     }
 
     private void assertResponseStatus(HttpStatus status, String error) {
