@@ -83,7 +83,6 @@ function stripMarkdown(text) {
 
 /* ══════════════════════════════
    CHATBOT
-   Falta fazer ainda: integrar com backend (/api/chat)
 ══════════════════════════════ */
 function ChatBot({ user }) {
   const [messages, setMessages] = useState([
@@ -105,8 +104,8 @@ function ChatBot({ user }) {
     setLoading(true)
 
     try {
-      const { data } = await api.get('/ai/conselho')
-      setMessages(prev => [...prev, { role: 'assistant', text: data }])
+      const { data } = await api.post('/ai/chat', { mensagem: text })
+      setMessages(prev => [...prev, { role: 'assistant', text: data.resposta }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
     } finally {
@@ -129,6 +128,7 @@ function ChatBot({ user }) {
           className="chat-input"
           type="text"
           placeholder="Digite sua pergunta…"
+          maxLength={500}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}

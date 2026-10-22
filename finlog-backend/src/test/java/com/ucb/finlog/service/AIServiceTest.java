@@ -115,6 +115,46 @@ class AIServiceTest {
     }
 
     @Test
+    void deveResponderPerguntaDoUsuarioComContextoFinanceiro() {
+        ReflectionTestUtils.setField(service, "apiKey", "chave");
+        ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
+
+        Movimentacao despesa = new Movimentacao();
+        despesa.setTipo(TipoMovimentacao.DESPESA);
+        despesa.setDescricao("Mercado");
+        despesa.setValor(BigDecimal.valueOf(200));
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(despesa));
+        when(restTemplate.postForObject(eq("https://gemini.test"), any(), eq(GeminiResponse.class)))
+                .thenReturn(new GeminiResponse(List.of(new GeminiResponse.Candidate(
+                        new GeminiResponse.Content(List.of(new GeminiResponse.Part("Corte o delivery.")))
+                ))));
+
+        assertEquals("Corte o delivery.", service.responderPergunta("maria@email.com", "  Como economizar?  "));
+
+        ArgumentCaptor<HttpEntity<GeminiRequest>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForObject(eq("https://gemini.test"), entityCaptor.capture(), eq(GeminiResponse.class));
+        String prompt = entityCaptor.getValue().getBody().contents().getFirst().parts().getFirst().text();
+        assertTrue(prompt.contains("Pergunta do usuario: \"Como economizar?\""));
+        assertTrue(prompt.contains("Despesas: R$200,00"));
+    }
+
+    @Test
+    void deveResponderPerguntaMesmoSemMovimentacoes() {
+        ReflectionTestUtils.setField(service, "apiKey", "chave");
+        ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of());
+        when(restTemplate.postForObject(eq("https://gemini.test"), any(), eq(GeminiResponse.class)))
+                .thenReturn(new GeminiResponse(List.of()));
+
+        assertEquals(
+                "Nao consegui gerar uma resposta agora. Tente reformular a pergunta.",
+                service.responderPergunta("maria@email.com", "O que e reserva de emergencia?")
+        );
+    }
+
+    @Test
     void deveRetornarConselhoPadraoQuandoApiRetornaRespostaIncompleta() {
         ReflectionTestUtils.setField(service, "apiKey", "chave");
         ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");

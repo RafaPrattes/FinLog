@@ -22,7 +22,8 @@ public class HomeController {
                         "POST /api/movimentacoes",
                         "GET /api/metas",
                         "POST /api/metas",
-                        "GET /api/ai/conselho"
+                        "GET /api/ai/conselho",
+                        "POST /api/ai/chat"
                 )
         );
     }

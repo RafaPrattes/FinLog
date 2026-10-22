@@ -2,6 +2,8 @@ package com.ucb.finlog.controller;
 
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
+import com.ucb.finlog.dto.ChatRequest;
+import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.dto.LoginRequest;
 import com.ucb.finlog.dto.MetaRequest;
 import com.ucb.finlog.dto.MetaResponse;
@@ -143,6 +145,17 @@ class ControllersTest {
         when(service.obterConselhoIA("maria@email.com")).thenReturn("Poupe mais.");
 
         assertEquals("Poupe mais.", new AIController(service).pegarConselho(new UsuarioAutenticado(1L, "maria@email.com")));
+    }
+
+    @Test
+    void aiControllerDeveResponderPerguntaDoChat() {
+        AIService service = mock(AIService.class);
+        when(service.responderPergunta("maria@email.com", "Quanto gastei?")).thenReturn("Voce gastou R$100,00.");
+
+        ChatResponse response = new AIController(service)
+                .conversar(new ChatRequest("Quanto gastei?"), new UsuarioAutenticado(1L, "maria@email.com"));
+
+        assertEquals("Voce gastou R$100,00.", response.resposta());
     }
 
     private Usuario usuario(Long id, String nome, String email) {
