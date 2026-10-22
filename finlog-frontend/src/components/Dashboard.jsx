@@ -1,156 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../service/api'
 import { mensagemErro } from '../service/errors'
-
-/* ══════════════════════════════
-   UTILS
-══════════════════════════════ */
-function brl(n) {
-  return 'R$' + Math.abs(n).toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-function today() {
-  return new Date().toISOString().split('T')[0]
-}
-function fmtDate(d) {
-  if (!d) return ''
-  const [y, m, day] = d.split('-')
-  return `${day}/${m}/${y}`
-}
-function mapMeta(m) {
-  return { id: m.id, desc: m.descricao, val: parseFloat(m.valor) || 0 }
-}
-function mapMovimentacao(m) {
-  return {
-    id:    m.id,
-    type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-    desc:  m.descricao,
-    val:   parseFloat(m.valor) || 0,
-    date:  m.data,
-    cat:   m.categoria?.nome || 'Outros',
-    catId: m.categoria?.id ?? null,
-  }
-}
-
-/* ══════════════════════════════
-   DONUT CHART
-══════════════════════════════ */
-function DonutChart({ entTotal, saiTotal }) {
-  const total = entTotal + saiTotal
-  const r     = 40
-  const cx    = 54
-  const cy    = 54
-  const circ  = 2 * Math.PI * r
-
-  if (total === 0) {
-    return (
-      <svg width="108" height="108">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#DDD9D2" strokeWidth="15" />
-      </svg>
-    )
-  }
-
-  const entArc = (entTotal / total) * circ
-  const saiArc = (saiTotal / total) * circ
-  const offset = circ / 4
-
-  return (
-    <svg width="108" height="108">
-      <circle
-        cx={cx} cy={cy} r={r}
-        fill="none" stroke="#8FA98B" strokeWidth="15"
-        strokeDasharray={`${entArc} ${circ - entArc}`}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-      />
-      {saiTotal > 0 && (
-        <circle
-          cx={cx} cy={cy} r={r}
-          fill="none" stroke="#C4A882" strokeWidth="15"
-          strokeDasharray={`${saiArc} ${circ - saiArc}`}
-          strokeDashoffset={offset - entArc}
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  )
-}
-
-/* ══════════════════════════════
-   UTILS — Markdown
-══════════════════════════════ */
-function stripMarkdown(text) {
-  if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
-    .replace(/\*(.*?)\*/g, '$1')        // *itálico*
-    .replace(/#{1,6}\s*/g, '')          // ## títulos
-    .replace(/`(.*?)`/g, '$1')          // `código inline`
-    .replace(/^\s*[-*+]\s+/gm, '')      // listas com marcadores
-    .replace(/^\s*\d+\.\s+/gm, '')      // listas numeradas
-    .trim()
-}
-
-/* ══════════════════════════════
-   CHATBOT
-══════════════════════════════ */
-function ChatBot({ user }) {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: `Olá${user?.nome ? ', ' + user.nome.split(' ')[0] : ''}! Sou seu assistente financeiro. Como posso te ajudar hoje?` }
-  ])
-  const [input,   setInput]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const bottomRef = useRef(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function send() {
-    const text = input.trim()
-    if (!text || loading) return
-    setMessages(prev => [...prev, { role: 'user', text }])
-    setInput('')
-    setLoading(true)
-
-    try {
-      const { data } = await api.post('/ai/chat', { mensagem: text })
-      setMessages(prev => [...prev, { role: 'assistant', text: data.resposta }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="chat-wrap">
-      <h2 className="page-title">Assistente IA</h2>
-      <div className="chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>{stripMarkdown(m.text)}</div>
-        ))}
-        {loading && <div className="chat-bubble assistant chat-typing">digitando…</div>}
-        <div ref={bottomRef} />
-      </div>
-      <div className="chat-input-row">
-        <input
-          className="chat-input"
-          type="text"
-          placeholder="Digite sua pergunta…"
-          aria-label="Pergunta para o assistente"
-          maxLength={500}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-        />
-        <button className="chat-send" onClick={send} disabled={loading}>Enviar</button>
-      </div>
-    </div>
-  )
-}
+import { brl, today, fmtDate, mapMeta, mapMovimentacao } from '../utils/format'
+import DonutChart from './DonutChart'
+import ChatBot from './ChatBot'
+import LancamentoModal from './LancamentoModal'
 
 /* ══════════════════════════════
    DASHBOARD
@@ -644,80 +498,36 @@ function Dashboard({ user, onLogout }) {
 
       {/* ═══ MODAL: NOVO LANÇAMENTO ═══ */}
       {lancModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setLancModal(false) }}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="lanc-modal-title">
-            <button className="m-close" onClick={() => setLancModal(false)} aria-label="Fechar">✕</button>
-            <div className="m-title" id="lanc-modal-title">Novo lançamento</div>
-            <div className="m-type-row">
-              <button className={`m-type-btn${lancType === 'entrada' ? ' e' : ''}`} onClick={() => setLancType('entrada')}>Entrada +</button>
-              <button className={`m-type-btn${lancType === 'saida'   ? ' s' : ''}`} onClick={() => setLancType('saida')}>Saída –</button>
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="lanc-desc">Descrição:</label>
-              <input id="lanc-desc" className="m-inp" type="text" maxLength={255} placeholder="Digite a descrição" value={lancForm.desc} onChange={e => setLancForm(f => ({ ...f, desc: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="lanc-val">Valor:</label>
-              <input id="lanc-val" className="m-inp" type="number" placeholder="Digite o valor" min="0.01" step="0.01" value={lancForm.val} onChange={e => setLancForm(f => ({ ...f, val: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="lanc-date">Data:</label>
-              <input id="lanc-date" className="m-inp" type="date" value={lancForm.date} onChange={e => setLancForm(f => ({ ...f, date: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="lanc-cat">Categoria:</label>
-              <select id="lanc-cat" className="m-inp" value={lancForm.catId} onChange={e => setLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
-                <option value="">Selecione uma categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                <option value="__nova__">+ Nova categoria…</option>
-              </select>
-            </div>
-            {lancForm.catId === '__nova__' && (
-              <div className="m-row">
-                <label className="m-lbl" htmlFor="lanc-cat-nova">Nova categoria:</label>
-                <input id="lanc-cat-nova" className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
-              </div>
-            )}
-            <button className="m-btn" onClick={saveLanc} disabled={salvando}>Confirmar</button>
-          </div>
-        </div>
+        <LancamentoModal
+          idPrefix="lanc"
+          title="Novo lançamento"
+          form={lancForm}
+          setForm={setLancForm}
+          categorias={categorias}
+          tipo={lancType}
+          onTipoChange={setLancType}
+          descPlaceholder="Digite a descrição"
+          valPlaceholder="Digite o valor"
+          submitLabel="Confirmar"
+          onSubmit={saveLanc}
+          salvando={salvando}
+          onClose={() => setLancModal(false)}
+        />
       )}
 
       {/* ═══ MODAL: EDITAR LANÇAMENTO ═══ */}
       {editLancModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setEditLancModal(null) }}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-lanc-modal-title">
-            <button className="m-close" onClick={() => setEditLancModal(null)} aria-label="Fechar">✕</button>
-            <div className="m-title" id="edit-lanc-modal-title">Editar lançamento</div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="edit-lanc-desc">Descrição:</label>
-              <input id="edit-lanc-desc" className="m-inp" type="text" maxLength={255} value={editLancForm.desc} onChange={e => setEditLancForm(f => ({ ...f, desc: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="edit-lanc-val">Valor:</label>
-              <input id="edit-lanc-val" className="m-inp" type="number" min="0.01" step="0.01" value={editLancForm.val} onChange={e => setEditLancForm(f => ({ ...f, val: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="edit-lanc-date">Data:</label>
-              <input id="edit-lanc-date" className="m-inp" type="date" value={editLancForm.date} onChange={e => setEditLancForm(f => ({ ...f, date: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="edit-lanc-cat">Categoria:</label>
-              <select id="edit-lanc-cat" className="m-inp" value={editLancForm.catId} onChange={e => setEditLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
-                <option value="">Selecione uma categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                <option value="__nova__">+ Nova categoria…</option>
-              </select>
-            </div>
-            {editLancForm.catId === '__nova__' && (
-              <div className="m-row">
-                <label className="m-lbl" htmlFor="edit-lanc-cat-nova">Nova categoria:</label>
-                <input id="edit-lanc-cat-nova" className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
-              </div>
-            )}
-            <button className="m-btn" onClick={saveEditLanc} disabled={salvando}>Salvar alterações</button>
-          </div>
-        </div>
+        <LancamentoModal
+          idPrefix="edit-lanc"
+          title="Editar lançamento"
+          form={editLancForm}
+          setForm={setEditLancForm}
+          categorias={categorias}
+          submitLabel="Salvar alterações"
+          onSubmit={saveEditLanc}
+          salvando={salvando}
+          onClose={() => setEditLancModal(null)}
+        />
       )}
 
       {/* ═══ MODAL: META ═══ */}
