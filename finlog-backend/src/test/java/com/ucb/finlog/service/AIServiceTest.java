@@ -119,7 +119,12 @@ class AIServiceTest {
         ReflectionTestUtils.setField(service, "apiKey", "chave");
         ReflectionTestUtils.setField(service, "apiUrl", "https://gemini.test");
 
-        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of());
+        Movimentacao movimentacao = new Movimentacao();
+        movimentacao.setTipo(TipoMovimentacao.RECEITA);
+        movimentacao.setDescricao("Freelance");
+        movimentacao.setValor(BigDecimal.valueOf(1000));
+
+        when(repository.findByUsuarioEmail("maria@email.com")).thenReturn(List.of(movimentacao));
         when(restTemplate.postForObject(eq("https://gemini.test"), any(), eq(GeminiResponse.class)))
                 .thenThrow(HttpServerErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR, "Erro", null, null, null));
 

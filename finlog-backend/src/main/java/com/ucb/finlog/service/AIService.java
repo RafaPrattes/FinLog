@@ -16,7 +16,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class AIService {
 
     private static final Logger log = LoggerFactory.getLogger(AIService.class);
+    private static final Locale PT_BR = Locale.of("pt", "BR");
 
     @Value("${gemini.api.key}")
     private String apiKey;
@@ -75,6 +78,7 @@ public class AIService {
                 .orElse(BigDecimal.ZERO);
 
         String resumoFinanceiro = String.format(
+                PT_BR,
                 "Receitas: R$%.2f | Despesas: R$%.2f | Saldo: R$%.2f | Maior gasto em %s: R$%.2f",
                 totalReceitas,
                 totalDespesas,
@@ -84,8 +88,11 @@ public class AIService {
         );
 
         String listaUltimasTransacoes = dados.stream()
+                .sorted(Comparator.comparing(Movimentacao::getData,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(5)
                 .map(m -> String.format(
+                        PT_BR,
                         "%s (%s): R$%.2f",
                         m.getDescricao(),
                         m.getCategoria() != null ? m.getCategoria().getNome() : "Geral",
