@@ -57,8 +57,9 @@ class ControllersTest {
         AuthController controller = new AuthController(service);
 
         assertEquals(authResponse, controller.login(request));
-        controller.logout();
+        controller.logout(new UsuarioAutenticado(1L, "maria@email.com"));
         verify(service).login(request);
+        verify(service).logout(1L);
     }
 
     @Test

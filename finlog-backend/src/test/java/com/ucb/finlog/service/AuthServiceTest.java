@@ -141,6 +141,28 @@ class AuthServiceTest {
     }
 
     @Test
+    void logoutDeveIncrementarVersaoDoTokenDoUsuario() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setTokenVersion(3);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        service.logout(1L);
+
+        assertEquals(4, usuario.getTokenVersion());
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void logoutDeUsuarioInexistenteNaoDeveFalhar() {
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
+
+        service.logout(1L);
+
+        verify(usuarioRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void hashFicticioDeveSerBcryptValidoComMesmoCustoDoPasswordEncoder() {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 

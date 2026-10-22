@@ -10,11 +10,13 @@ import com.ucb.finlog.security.LoginAttemptService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
 @Service
+@Transactional
 public class AuthService {
     /**
      * Hash BCrypt (custo 10, igual ao PasswordEncoder) de uma senha aleatoria. E comparado quando o
@@ -58,6 +60,16 @@ public class AuthService {
 
         loginAttemptService.registrarSucesso(email);
         return criarResposta(usuario.get());
+    }
+
+    /**
+     * Incrementa a versao de token do usuario, invalidando todos os tokens emitidos ate agora.
+     */
+    public void logout(Long usuarioId) {
+        usuarioRepository.findById(usuarioId).ifPresent(usuario -> {
+            usuario.setTokenVersion(usuario.getTokenVersion() + 1);
+            usuarioRepository.save(usuario);
+        });
     }
 
     private AuthResponse criarResposta(Usuario usuario) {

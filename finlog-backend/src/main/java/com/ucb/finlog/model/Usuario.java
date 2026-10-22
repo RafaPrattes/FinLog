@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.List;
 
@@ -31,6 +32,14 @@ public class Usuario {
     @JsonIgnore
     @Column(nullable = false)
     private String senha;
+
+    /**
+     * Versao dos tokens emitidos para o usuario. Incrementar invalida todos os tokens anteriores (logout).
+     */
+    @JsonIgnore
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private int tokenVersion;
 
     @JsonIgnore
     @OneToMany(mappedBy = "usuario")
