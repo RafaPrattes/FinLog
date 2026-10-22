@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class SecurityConfigTest {
-    private final SecurityConfig config = new SecurityConfig(mock(AuthTokenFilter.class));
+    private final SecurityConfig config = new SecurityConfig(mock(AuthTokenFilter.class), SecurityConfig.ORIGENS_PADRAO);
 
     @Test
     void deveCriarPasswordEncoderBCrypt() {
@@ -111,7 +111,24 @@ class SecurityConfigTest {
         );
         assertEquals(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"), cors.getAllowedMethods());
         assertEquals(java.util.List.of("Content-Type", "Authorization"), cors.getAllowedHeaders());
-        assertEquals(true, cors.getAllowCredentials());
+        assertEquals(false, cors.getAllowCredentials());
+    }
+
+    @Test
+    void corsDeveUsarOrigensConfiguradasIgnorandoEspacosEItensVazios() {
+        SecurityConfig configurado = new SecurityConfig(
+                mock(AuthTokenFilter.class),
+                " https://finlog.exemplo.com , ,http://localhost:3000 "
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/api/movimentacoes");
+
+        CorsConfiguration cors = configurado.corsConfigurationSource().getCorsConfiguration(request);
+
+        assertNotNull(cors);
+        assertEquals(
+                java.util.List.of("https://finlog.exemplo.com", "http://localhost:3000"),
+                cors.getAllowedOrigins()
+        );
     }
 
     @Test
