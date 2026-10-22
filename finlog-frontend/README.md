@@ -1,16 +1,44 @@
-# React + Vite
+# FinLog — front-end
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface web do FinLog, app de controle financeiro pessoal: login e cadastro,
+saldo, entradas e saídas, extrato com filtros, metas e um assistente de IA.
+Feito com React 19 e Vite; conversa com a API do `finlog-backend` via axios.
 
-Currently, two official plugins are available:
+## Como rodar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requer Node.js 22.12 ou mais recente e o backend em execução.
 
-## React Compiler
+```bash
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O Vite mostra o endereço local (normalmente http://localhost:5173).
 
-## Expanding the ESLint configuration
+## Endereço da API
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Por padrão o front usa `http://localhost:8080/api`. Para apontar para outro
+backend, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL`:
+
+```bash
+VITE_API_URL=http://localhost:8080/api
+```
+
+O `.env.local` não vai para o Git. Reinicie o `npm run dev` depois de alterá-lo.
+
+## Scripts
+
+| Comando           | O que faz                                        |
+| ----------------- | ------------------------------------------------ |
+| `npm run dev`     | Servidor de desenvolvimento com recarga automática |
+| `npm run build`   | Gera a versão de produção em `dist/`             |
+| `npm run preview` | Serve localmente o conteúdo de `dist/`           |
+| `npm run lint`    | Verifica o código com ESLint                     |
+| `npm test`        | Roda os testes (Vitest + Testing Library)        |
+
+## Estrutura
+
+- `src/App.jsx` — troca entre as telas (login, cadastro, painel) e restaura a sessão
+- `src/components/` — telas e componentes (`Dashboard`, `ChatBot`, `LancamentoModal`…)
+- `src/service/` — cliente da API (`api.js`), token da sessão e mensagens de erro
+- `src/utils/format.js` — formatação de valores e datas e mapeamento das respostas da API
