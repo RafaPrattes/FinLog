@@ -159,6 +159,8 @@ function Dashboard({ user, onLogout }) {
   const [metas,      setMetas]      = useState([])
   const [editModeOn, setEditModeOn] = useState(false)
   const [loading,    setLoading]    = useState(true)
+  const [loadError,  setLoadError]  = useState(false)
+  const [reloadKey,  setReloadKey]  = useState(0)
   const [activeTab,  setActiveTab]  = useState('home')
 
   const [filterType, setFilterType] = useState('all')
@@ -184,40 +186,51 @@ function Dashboard({ user, onLogout }) {
   const [toastVisible, setToastVisible] = useState(false)
   const toastTimer = useRef(null)
 
-  /* ══ Carregar movimentações e categorias do usuário logado ══ */
+  /* ══ Carregar movimentações, categorias e metas do usuário logado ══ */
   useEffect(() => {
     async function fetchCategorias() {
       try {
         const { data } = await api.get('/categorias')
         setCategorias(data)
+        return true
       } catch (err) {
         console.error('Erro ao carregar categorias:', err)
+        return false
       }
     }
     async function fetchMovimentacoes() {
       try {
         const { data } = await api.get('/movimentacoes')
         setTxns(data.map(mapMovimentacao))
+        return true
       } catch (err) {
         console.error('Erro ao carregar movimentações:', err)
-      } finally {
-        setLoading(false)
+        return false
       }
     }
     async function fetchMetas() {
       try {
         const { data } = await api.get('/metas')
         setMetas(data.map(mapMeta))
+        return true
       } catch (err) {
         console.error('Erro ao carregar metas:', err)
+        return false
       }
     }
-    if (user?.id) {
-      fetchCategorias()
-      fetchMovimentacoes()
-      fetchMetas()
+    async function fetchTudo() {
+      const resultados = await Promise.all([fetchCategorias(), fetchMovimentacoes(), fetchMetas()])
+      setLoadError(resultados.includes(false))
+      setLoading(false)
     }
-  }, [user])
+    if (user?.id) fetchTudo()
+  }, [user, reloadKey])
+
+  function recarregar() {
+    setLoading(true)
+    setLoadError(false)
+    setReloadKey(k => k + 1)
+  }
 
   /* ══ Valores calculados ══ */
   const entTotal = txns.filter(t => t.type === 'entrada').reduce((s, t) => s + t.val, 0)
@@ -586,6 +599,13 @@ function Dashboard({ user, onLogout }) {
                 <div className="extrato-scroll">
                   {loading ? (
                     <div className="empty-msg">Carregando…</div>
+                  ) : loadError ? (
+                    <div className="empty-msg" role="alert">
+                      Não foi possível carregar seus dados.
+                      <div>
+                        <button className="link-btn" onClick={recarregar}>Tentar novamente</button>
+                      </div>
+                    </div>
                   ) : filteredTxns.length === 0 ? (
                     <div className="empty-msg">Nenhuma movimentação encontrada.</div>
                   ) : (
