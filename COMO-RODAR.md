@@ -41,7 +41,14 @@ cd finlog-backend
 copy .env.example .env
 ```
 
-Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com valores padrão que funcionam sem precisar mudar nada, **exceto a linha da chave da Gemini** (`GEMINI_API_KEY`), que você precisa preencher — veja o passo 4.
+Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com valores padrão que funcionam sem precisar mudar nada, **exceto duas linhas**:
+
+- `GEMINI_API_KEY`: a chave da IA, veja o passo 4.
+- `APP_AUTH_TOKEN_SECRET`: o segredo que assina os logins. O backend **não liga** sem ele. Precisa ter pelo menos 32 caracteres aleatórios e não pode conter `change-me`. Para gerar um, rode no PowerShell:
+  ```powershell
+  [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+  ```
+  e cole o resultado no lugar do valor de exemplo.
 
 Se quiser, pode revisar/ajustar os outros valores (útil só se alguma porta já estiver em uso na sua máquina):
 

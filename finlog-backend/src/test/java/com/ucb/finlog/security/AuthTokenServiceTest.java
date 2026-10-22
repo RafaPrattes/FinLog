@@ -6,6 +6,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Base64;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,9 +84,38 @@ class AuthTokenServiceTest {
         assertInstanceOf(NullPointerException.class, exception.getCause());
     }
 
+    @Test
+    void deveAceitarSegredoForte() {
+        AuthTokenService service = serviceComConfiguracao(3600);
+
+        assertDoesNotThrow(service::validarSegredo);
+    }
+
+    @Test
+    void deveRecusarSegredoAusenteCurtoOuDeExemplo() {
+        for (String segredo : new String[]{null, "curto", "change-me-to-a-long-random-secret-0123456789"}) {
+            AuthTokenService service = serviceComConfiguracao(3600);
+            ReflectionTestUtils.setField(service, "tokenSecret", segredo);
+
+            assertThrows(IllegalStateException.class, service::validarSegredo);
+        }
+    }
+
+    @Test
+    void deveRejeitarTokenComAssinaturaAdulterada() {
+        AuthTokenService service = serviceComConfiguracao(3600);
+        Usuario usuario = new Usuario();
+        usuario.setId(7L);
+        usuario.setEmail("maria@email.com");
+        String token = service.gerarToken(usuario);
+        String adulterado = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+
+        assertThrows(IllegalArgumentException.class, () -> service.validarToken(adulterado));
+    }
+
     private AuthTokenService serviceComConfiguracao(long expirationSeconds) {
         AuthTokenService service = new AuthTokenService();
-        ReflectionTestUtils.setField(service, "tokenSecret", "segredo-com-tamanho-suficiente");
+        ReflectionTestUtils.setField(service, "tokenSecret", "segredo-de-teste-com-mais-de-32-caracteres");
         ReflectionTestUtils.setField(service, "expirationSeconds", expirationSeconds);
         return service;
     }
