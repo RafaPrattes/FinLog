@@ -8,7 +8,7 @@ Guia passo a passo para configurar e rodar o projeto do zero na sua máquina —
 |---|---|---|
 | **Git** | Baixar o código do repositório | https://git-scm.com/downloads |
 | **Docker Desktop** | Roda o backend e o banco de dados MySQL automaticamente, sem precisar instalar Java nem MySQL na sua máquina | https://www.docker.com/products/docker-desktop |
-| **Node.js** (versão 20 ou mais recente) | Roda o frontend (a tela do sistema) | https://nodejs.org |
+| **Node.js** (versão 22.12 ou mais recente) | Roda o frontend (a tela do sistema) | https://nodejs.org |
 
 Depois de instalar, confirme que deu certo abrindo um terminal (PowerShell, no Windows) e rodando:
 
@@ -135,7 +135,7 @@ Com os dois terminais rodando (Docker no primeiro, `npm run dev` no segundo):
 Você rodou `docker compose` fora da pasta `finlog-backend`. O arquivo `docker-compose.yml` fica dentro dela — sempre rode o comando de lá (`cd finlog-backend` primeiro).
 
 **Porta já em uso (erro ao subir o Docker)**
-Alguma outra coisa na sua máquina já está usando a porta 3306 (banco) ou 8080 (backend). Troque `MYSQL_PORT` ou `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `3307`, `8081`) e rode `docker compose up --build` de novo.
+Alguma outra coisa na sua máquina já está usando a porta 8080 (backend). Troque `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `8081`) e rode `docker compose up --build` de novo. O banco MySQL não é publicado no seu computador por padrão (só o backend acessa); se quiser conectar um cliente SQL, descomente o bloco `ports` do `mysql-db` no `docker-compose.yml` e use `MYSQL_PORT`.
 > Se mudar `FINLOG_BACKEND_PORT`, avise o frontend: dentro de `finlog-frontend`, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL` (ex: `VITE_API_URL=http://localhost:8081/api`). Depois reinicie o `npm run dev`.
 
 **Assistente IA não responde**
