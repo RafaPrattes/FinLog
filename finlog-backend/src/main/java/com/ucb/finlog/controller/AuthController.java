@@ -3,6 +3,7 @@ package com.ucb.finlog.controller;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.LoginRequest;
 import com.ucb.finlog.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +21,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest request) {
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return service.login(request);
     }
 
