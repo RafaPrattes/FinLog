@@ -140,6 +140,7 @@ function ChatBot({ user }) {
           className="chat-input"
           type="text"
           placeholder="Digite sua pergunta…"
+          aria-label="Pergunta para o assistente"
           maxLength={500}
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -491,13 +492,13 @@ function Dashboard({ user, onLogout }) {
             🤖 Assistente IA
           </button>
         </nav>
-        <div className="sidebar-user" onClick={confirmLogout} title="Sair">
-          <div className="avatar">{avatarText}</div>
+        <button type="button" className="sidebar-user" onClick={confirmLogout} title="Sair">
+          <div className="avatar" aria-hidden="true">{avatarText}</div>
           <div>
             <div className="user-name">{user?.nome || 'Usuário'}</div>
             <div className="logout-label">Clique para sair</div>
           </div>
-        </div>
+        </button>
       </aside>
 
       {/* ─── MAIN ─── */}
@@ -549,7 +550,7 @@ function Dashboard({ user, onLogout }) {
               <div className="card">
                 <div className="card-head">
                   <div className="card-head-title">Suas Metas</div>
-                  <button className="icon-btn" onClick={() => openMetaModal(null)}>+</button>
+                  <button className="icon-btn" onClick={() => openMetaModal(null)} aria-label="Adicionar meta">+</button>
                 </div>
                 <div className="metas-scroll">
                   {metas.length === 0 ? (
@@ -560,8 +561,8 @@ function Dashboard({ user, onLogout }) {
                         <div className="meta-d">{m.desc}</div>
                         <div className="meta-v">{brl(m.val)}</div>
                         <div className="meta-act">
-                          <button className="edit-m" onClick={() => openMetaModal(m.id)}>✏</button>
-                          <button className="del-m"  onClick={() => delMeta(m.id)}>🗑</button>
+                          <button className="edit-m" onClick={() => openMetaModal(m.id)} aria-label={`Editar meta ${m.desc}`}>✏</button>
+                          <button className="del-m"  onClick={() => delMeta(m.id)} aria-label={`Excluir meta ${m.desc}`}>🗑</button>
                         </div>
                       </div>
                     ))
@@ -580,17 +581,17 @@ function Dashboard({ user, onLogout }) {
                     >
                       {editModeOn ? '✓ Concluir' : '✏ Editar'}
                     </button>
-                    <button className="icon-btn" onClick={() => openLanc('entrada')}>+</button>
+                    <button className="icon-btn" onClick={() => openLanc('entrada')} aria-label="Novo lançamento">+</button>
                   </div>
                 </div>
 
                 <div className="filter-bar">
-                  <select className="fsel" value={filterType} onChange={e => setFilterType(e.target.value)}>
+                  <select className="fsel" aria-label="Filtrar por tipo" value={filterType} onChange={e => setFilterType(e.target.value)}>
                     <option value="all">Todos</option>
                     <option value="entrada">Entradas</option>
                     <option value="saida">Saídas</option>
                   </select>
-                  <select className="fsel" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+                  <select className="fsel" aria-label="Filtrar por categoria" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
                     <option value="all">Todas categorias</option>
                     {cats.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -624,8 +625,8 @@ function Dashboard({ user, onLogout }) {
                           </div>
                           {editModeOn && (
                             <div className="txn-actions show">
-                              <button className="ea" onClick={() => openEditLanc(t)}>✏</button>
-                              <button className="da" onClick={() => delLanc(t.id)}>🗑</button>
+                              <button className="ea" onClick={() => openEditLanc(t)} aria-label={`Editar lançamento ${t.desc}`}>✏</button>
+                              <button className="da" onClick={() => delLanc(t.id)} aria-label={`Excluir lançamento ${t.desc}`}>🗑</button>
                             </div>
                           )}
                         </div>
@@ -644,28 +645,28 @@ function Dashboard({ user, onLogout }) {
       {/* ═══ MODAL: NOVO LANÇAMENTO ═══ */}
       {lancModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setLancModal(false) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setLancModal(false)}>✕</button>
-            <div className="m-title">Novo lançamento</div>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="lanc-modal-title">
+            <button className="m-close" onClick={() => setLancModal(false)} aria-label="Fechar">✕</button>
+            <div className="m-title" id="lanc-modal-title">Novo lançamento</div>
             <div className="m-type-row">
               <button className={`m-type-btn${lancType === 'entrada' ? ' e' : ''}`} onClick={() => setLancType('entrada')}>Entrada +</button>
               <button className={`m-type-btn${lancType === 'saida'   ? ' s' : ''}`} onClick={() => setLancType('saida')}>Saída –</button>
             </div>
             <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" placeholder="Digite a descrição" value={lancForm.desc} onChange={e => setLancForm(f => ({ ...f, desc: e.target.value }))} />
+              <label className="m-lbl" htmlFor="lanc-desc">Descrição:</label>
+              <input id="lanc-desc" className="m-inp" type="text" maxLength={255} placeholder="Digite a descrição" value={lancForm.desc} onChange={e => setLancForm(f => ({ ...f, desc: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" placeholder="Digite o valor" min="0.01" step="0.01" value={lancForm.val} onChange={e => setLancForm(f => ({ ...f, val: e.target.value }))} />
+              <label className="m-lbl" htmlFor="lanc-val">Valor:</label>
+              <input id="lanc-val" className="m-inp" type="number" placeholder="Digite o valor" min="0.01" step="0.01" value={lancForm.val} onChange={e => setLancForm(f => ({ ...f, val: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Data:</span>
-              <input className="m-inp" type="date" value={lancForm.date} onChange={e => setLancForm(f => ({ ...f, date: e.target.value }))} />
+              <label className="m-lbl" htmlFor="lanc-date">Data:</label>
+              <input id="lanc-date" className="m-inp" type="date" value={lancForm.date} onChange={e => setLancForm(f => ({ ...f, date: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Categoria:</span>
-              <select className="m-inp" value={lancForm.catId} onChange={e => setLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
+              <label className="m-lbl" htmlFor="lanc-cat">Categoria:</label>
+              <select id="lanc-cat" className="m-inp" value={lancForm.catId} onChange={e => setLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
                 <option value="">Selecione uma categoria</option>
                 {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 <option value="__nova__">+ Nova categoria…</option>
@@ -673,8 +674,8 @@ function Dashboard({ user, onLogout }) {
             </div>
             {lancForm.catId === '__nova__' && (
               <div className="m-row">
-                <span className="m-lbl">Nova categoria:</span>
-                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
+                <label className="m-lbl" htmlFor="lanc-cat-nova">Nova categoria:</label>
+                <input id="lanc-cat-nova" className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
               </div>
             )}
             <button className="m-btn" onClick={saveLanc} disabled={salvando}>Confirmar</button>
@@ -685,24 +686,24 @@ function Dashboard({ user, onLogout }) {
       {/* ═══ MODAL: EDITAR LANÇAMENTO ═══ */}
       {editLancModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setEditLancModal(null) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setEditLancModal(null)}>✕</button>
-            <div className="m-title">Editar lançamento</div>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-lanc-modal-title">
+            <button className="m-close" onClick={() => setEditLancModal(null)} aria-label="Fechar">✕</button>
+            <div className="m-title" id="edit-lanc-modal-title">Editar lançamento</div>
             <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" value={editLancForm.desc} onChange={e => setEditLancForm(f => ({ ...f, desc: e.target.value }))} />
+              <label className="m-lbl" htmlFor="edit-lanc-desc">Descrição:</label>
+              <input id="edit-lanc-desc" className="m-inp" type="text" maxLength={255} value={editLancForm.desc} onChange={e => setEditLancForm(f => ({ ...f, desc: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" min="0.01" step="0.01" value={editLancForm.val} onChange={e => setEditLancForm(f => ({ ...f, val: e.target.value }))} />
+              <label className="m-lbl" htmlFor="edit-lanc-val">Valor:</label>
+              <input id="edit-lanc-val" className="m-inp" type="number" min="0.01" step="0.01" value={editLancForm.val} onChange={e => setEditLancForm(f => ({ ...f, val: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Data:</span>
-              <input className="m-inp" type="date" value={editLancForm.date} onChange={e => setEditLancForm(f => ({ ...f, date: e.target.value }))} />
+              <label className="m-lbl" htmlFor="edit-lanc-date">Data:</label>
+              <input id="edit-lanc-date" className="m-inp" type="date" value={editLancForm.date} onChange={e => setEditLancForm(f => ({ ...f, date: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Categoria:</span>
-              <select className="m-inp" value={editLancForm.catId} onChange={e => setEditLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
+              <label className="m-lbl" htmlFor="edit-lanc-cat">Categoria:</label>
+              <select id="edit-lanc-cat" className="m-inp" value={editLancForm.catId} onChange={e => setEditLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
                 <option value="">Selecione uma categoria</option>
                 {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 <option value="__nova__">+ Nova categoria…</option>
@@ -710,8 +711,8 @@ function Dashboard({ user, onLogout }) {
             </div>
             {editLancForm.catId === '__nova__' && (
               <div className="m-row">
-                <span className="m-lbl">Nova categoria:</span>
-                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
+                <label className="m-lbl" htmlFor="edit-lanc-cat-nova">Nova categoria:</label>
+                <input id="edit-lanc-cat-nova" className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
               </div>
             )}
             <button className="m-btn" onClick={saveEditLanc} disabled={salvando}>Salvar alterações</button>
@@ -722,16 +723,16 @@ function Dashboard({ user, onLogout }) {
       {/* ═══ MODAL: META ═══ */}
       {metaModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setMetaModal(false) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setMetaModal(false)}>✕</button>
-            <div className="m-title">{editingMetaId ? 'Editar Meta' : 'Nova Meta'}</div>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="meta-modal-title">
+            <button className="m-close" onClick={() => setMetaModal(false)} aria-label="Fechar">✕</button>
+            <div className="m-title" id="meta-modal-title">{editingMetaId ? 'Editar Meta' : 'Nova Meta'}</div>
             <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" placeholder="Ex: Casa própria…" value={metaForm.desc} onChange={e => setMetaForm(f => ({ ...f, desc: e.target.value }))} />
+              <label className="m-lbl" htmlFor="meta-desc">Descrição:</label>
+              <input id="meta-desc" className="m-inp" type="text" maxLength={255} placeholder="Ex: Casa própria…" value={metaForm.desc} onChange={e => setMetaForm(f => ({ ...f, desc: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
+              <label className="m-lbl" htmlFor="meta-val">Valor:</label>
+              <input id="meta-val" className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
             </div>
             <button className="m-btn" onClick={saveMeta} disabled={salvando}>Confirmar</button>
           </div>
@@ -741,9 +742,9 @@ function Dashboard({ user, onLogout }) {
       {/* ═══ MODAL: CONFIRMAÇÃO ═══ */}
       {confirmModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setConfirmModal(null) }}>
-          <div className="modal narrow">
-            <div className="m-title" style={{ fontSize: '19px' }}>{confirmModal.title || 'Confirmar exclusão'}</div>
-            <p className="conf-msg">{confirmModal.msg}</p>
+          <div className="modal narrow" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-msg">
+            <div className="m-title" id="confirm-modal-title" style={{ fontSize: '19px' }}>{confirmModal.title || 'Confirmar exclusão'}</div>
+            <p className="conf-msg" id="confirm-modal-msg">{confirmModal.msg}</p>
             <div className="conf-btns">
               <button className="btn-cancel" onClick={() => setConfirmModal(null)}>Cancelar</button>
               <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>{confirmModal.confirmLabel || 'Excluir'}</button>
@@ -753,7 +754,7 @@ function Dashboard({ user, onLogout }) {
       )}
 
       {/* ═══ TOAST ═══ */}
-      <div className={`toast${toastVisible ? ' show' : ''}`}>{toastMsg}</div>
+      <div className={`toast${toastVisible ? ' show' : ''}`} role="status" aria-live="polite">{toastMsg}</div>
 
     </div>
   )

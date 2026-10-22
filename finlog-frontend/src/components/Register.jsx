@@ -62,6 +62,9 @@ function Register({ goToLogin }) {
           type="text"
           className="field"
           placeholder="Nome completo"
+          aria-label="Nome completo"
+          autoComplete="name"
+          maxLength={100}
           value={name}
           onChange={e => setName(e.target.value)}
         />
@@ -69,6 +72,8 @@ function Register({ goToLogin }) {
           type="email"
           className="field"
           placeholder="Cadastre um e-mail"
+          aria-label="E-mail"
+          autoComplete="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
         />
@@ -76,6 +81,8 @@ function Register({ goToLogin }) {
           type="email"
           className="field"
           placeholder="Confirme o e-mail"
+          aria-label="Confirmação do e-mail"
+          autoComplete="email"
           value={confirmEmail}
           onChange={e => setConfirmEmail(e.target.value)}
         />
@@ -83,6 +90,9 @@ function Register({ goToLogin }) {
           type="password"
           className="field"
           placeholder="Cadastre uma senha"
+          aria-label="Senha"
+          autoComplete="new-password"
+          maxLength={72}
           value={password}
           onChange={e => setPassword(e.target.value)}
         />
@@ -90,6 +100,9 @@ function Register({ goToLogin }) {
           type="password"
           className="field"
           placeholder="Confirme a senha"
+          aria-label="Confirmação da senha"
+          autoComplete="new-password"
+          maxLength={72}
           value={confirmPassword}
           onChange={e => setConfirmPassword(e.target.value)}
         />

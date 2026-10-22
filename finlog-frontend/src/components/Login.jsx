@@ -61,6 +61,7 @@ function Login({ aviso = '', goToRegister, onLogin }) {
         <input
           type="email"
           autoComplete="email"
+          aria-label="E-mail"
           className={`field${userErr ? ' err' : ''}`}
           placeholder="E-mail"
           value={userInput}
@@ -70,6 +71,7 @@ function Login({ aviso = '', goToRegister, onLogin }) {
         <input
           type="password"
           autoComplete="current-password"
+          aria-label="Senha"
           className={`field${passErr ? ' err' : ''}`}
           placeholder="Senha"
           value={password}
