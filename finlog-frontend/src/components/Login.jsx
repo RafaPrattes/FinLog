@@ -28,7 +28,7 @@ function Login({ goToRegister, onLogin }) {
       setLoading(true)
       const { data } = await api.post('/auth/login', { email: u, senha: p })
       onLogin(data)
-    } catch (err) {
+    } catch {
       setError('Usuário ou senha inválidos.')
       setUserErr(true)
       setPassErr(true)

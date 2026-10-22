@@ -12,4 +12,8 @@ public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Long
     List<Movimentacao> findByUsuarioEmail(String email);
 
     Optional<Movimentacao> findByIdAndUsuarioEmail(Long id, String email);
+
+    List<Movimentacao> findByCategoriaIdAndUsuarioEmail(Long categoriaId, String email);
+
+    boolean existsByCategoriaIdAndUsuarioEmail(Long categoriaId, String email);
 }
