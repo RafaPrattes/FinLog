@@ -136,7 +136,7 @@ Você rodou `docker compose` fora da pasta `finlog-backend`. O arquivo `docker-c
 
 **Porta já em uso (erro ao subir o Docker)**
 Alguma outra coisa na sua máquina já está usando a porta 3306 (banco) ou 8080 (backend). Troque `MYSQL_PORT` ou `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `3307`, `8081`) e rode `docker compose up --build` de novo.
-> Se mudar `FINLOG_BACKEND_PORT`, também precisa atualizar a URL em `finlog-frontend/src/service/api.js` (o endereço que o frontend usa pra falar com o backend), já que esse endereço está fixo no código, não vem do `.env`.
+> Se mudar `FINLOG_BACKEND_PORT`, avise o frontend: dentro de `finlog-frontend`, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL` (ex: `VITE_API_URL=http://localhost:8081/api`). Depois reinicie o `npm run dev`.
 
 **Assistente IA não responde**
 Confire se preencheu `GEMINI_API_KEY` no `.env` com uma chave válida (veja passo 4), e se o backend foi reiniciado depois de editar o `.env` (`docker compose down` + `docker compose up --build`).
