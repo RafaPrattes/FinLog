@@ -2,6 +2,9 @@ package com.ucb.finlog.controller;
 
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
+import com.ucb.finlog.dto.CategoriaDTO;
+import com.ucb.finlog.dto.CategoriaRequest;
+import com.ucb.finlog.dto.CategoriaResumoDTO;
 import com.ucb.finlog.dto.ChatRequest;
 import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.dto.LoginRequest;
@@ -17,6 +20,7 @@ import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.AIService;
 import com.ucb.finlog.service.AuthService;
+import com.ucb.finlog.service.CategoriaService;
 import com.ucb.finlog.service.MetaService;
 import com.ucb.finlog.service.MovimentacaoService;
 import com.ucb.finlog.service.UsuarioService;
@@ -137,6 +141,35 @@ class ControllersTest {
         assertEquals(5L, controller.atualizar(5L, request, usuario).id());
         controller.deletar(5L, usuario);
         verify(service).deletar(5L, "maria@email.com");
+    }
+
+    @Test
+    void categoriaControllerDeveDelegarOperacoes() {
+        CategoriaService service = mock(CategoriaService.class);
+        UsuarioAutenticado usuario = new UsuarioAutenticado(1L, "maria@email.com");
+        CategoriaRequest request = new CategoriaRequest("Mercado", "Compras");
+        CategoriaDTO dto = new CategoriaDTO();
+        dto.setId(3L);
+        dto.setNome("Mercado");
+        CategoriaResumoDTO resumo = new CategoriaResumoDTO(3L, "Mercado", null, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN.negate());
+
+        when(service.listarTodas("maria@email.com")).thenReturn(List.of(dto));
+        when(service.buscarPorId(3L, "maria@email.com")).thenReturn(dto);
+        when(service.criar(request, "maria@email.com")).thenReturn(dto);
+        when(service.atualizar(3L, request, "maria@email.com")).thenReturn(dto);
+        when(service.resumo("maria@email.com")).thenReturn(List.of(resumo));
+        when(service.resumoPorId(3L, "maria@email.com")).thenReturn(resumo);
+
+        CategoriaController controller = new CategoriaController(service);
+
+        assertEquals(List.of(dto), controller.listar(usuario));
+        assertEquals(dto, controller.buscar(3L, usuario));
+        assertEquals(dto, controller.criar(request, usuario));
+        assertEquals(dto, controller.atualizar(3L, request, usuario));
+        assertEquals(List.of(resumo), controller.resumo(usuario));
+        assertEquals(resumo, controller.resumoPorId(3L, usuario));
+        controller.deletar(3L, usuario);
+        verify(service).deletar(3L, "maria@email.com");
     }
 
     @Test

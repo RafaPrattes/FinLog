@@ -140,6 +140,22 @@ class RequestValidationTest {
         assertEquals(Set.of("Valor invalido"), mensagens(validator.validate(request)));
     }
 
+    @Test
+    void categoriaDeveExigirNomeELimitarTamanhos() {
+        assertEquals(
+                Set.of("Nome da categoria e obrigatorio"),
+                mensagens(validator.validate(new CategoriaRequest(" ", null)))
+        );
+        assertEquals(
+                Set.of(
+                        "Nome da categoria deve ter no maximo 100 caracteres",
+                        "Descricao deve ter no maximo 255 caracteres"
+                ),
+                mensagens(validator.validate(new CategoriaRequest("c".repeat(101), "d".repeat(256))))
+        );
+        assertTrue(validator.validate(new CategoriaRequest("Mercado", "Compras")).isEmpty());
+    }
+
     private static <T> Set<String> mensagens(Set<ConstraintViolation<T>> violacoes) {
         return violacoes.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
     }
