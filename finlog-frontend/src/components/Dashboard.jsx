@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../service/api'
 import { mensagemErro } from '../service/errors'
-import { brl, today, fmtDate, mapMeta, mapMovimentacao } from '../utils/format'
-import DonutChart from './DonutChart'
+import { today, mapMeta, mapMovimentacao } from '../utils/format'
+import Sidebar from './Sidebar'
 import ChatBot from './ChatBot'
 import LancamentoModal from './LancamentoModal'
+import MetaModal from './MetaModal'
+import ConfirmModal from './ConfirmModal'
+import Inicio from '../pages/Inicio'
+import Extrato from '../pages/Extrato'
+import Metas from '../pages/Metas'
+import Configuracoes from '../pages/Configuracoes'
 
 /* ══════════════════════════════
    DASHBOARD
@@ -12,14 +18,11 @@ import LancamentoModal from './LancamentoModal'
 function Dashboard({ user, onLogout }) {
   const [txns,       setTxns]       = useState([])
   const [metas,      setMetas]      = useState([])
-  const [editModeOn, setEditModeOn] = useState(false)
   const [loading,    setLoading]    = useState(true)
   const [loadError,  setLoadError]  = useState(false)
   const [reloadKey,  setReloadKey]  = useState(0)
-  const [activeTab,  setActiveTab]  = useState('home')
-
-  const [filterType, setFilterType] = useState('all')
-  const [filterCat,  setFilterCat]  = useState('all')
+  /* Tela ativa: home | extrato | metas | chat | config */
+  const [view,       setView]       = useState('home')
 
   const [categorias, setCategorias] = useState([])
 
@@ -86,22 +89,6 @@ function Dashboard({ user, onLogout }) {
     setLoadError(false)
     setReloadKey(k => k + 1)
   }
-
-  /* ══ Valores calculados ══ */
-  const entTotal = txns.filter(t => t.type === 'entrada').reduce((s, t) => s + t.val, 0)
-  const saiTotal = txns.filter(t => t.type === 'saida'  ).reduce((s, t) => s + t.val, 0)
-  const saldo    = entTotal - saiTotal
-
-  const cats = [...new Set(txns.map(t => t.cat))].sort()
-
-  const filteredTxns = [...txns]
-    .reverse()
-    .filter(t => filterType === 'all' || t.type === filterType)
-    .filter(t => filterCat  === 'all' || t.cat  === filterCat)
-
-  const avatarText = user?.nome
-    ? user.nome.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-    : 'U'
 
   /* ══ Toast ══ */
   function showToast(msg) {
@@ -203,6 +190,7 @@ function Dashboard({ user, onLogout }) {
       setTxns(prev =>
         prev.map(t => t.id === editLancModal.id ? {
           ...t,
+          type:  editLancModal.type,
           desc,
           val,
           date,
@@ -301,6 +289,7 @@ function Dashboard({ user, onLogout }) {
     setConfirmModal({
       title:        'Encerrar sessão',
       confirmLabel: 'Sair',
+      variant:      'primary',
       msg:          'Deseja encerrar a sessão?',
       cb: () => {
         showToast('Sessão encerrada.')
@@ -323,177 +312,53 @@ function Dashboard({ user, onLogout }) {
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
+  const estado = { loading, loadError, onRetry: recarregar }
+
   /* ══════════════════════════════
      RENDER
   ══════════════════════════════ */
   return (
-    <div id="screen-dashboard" className="screen active">
+    <div id="screen-dashboard" className={`screen active${view === 'chat' ? ' chat-page' : ''}`}>
 
-      {/* ─── SIDEBAR ─── */}
-      <aside className="sidebar">
-        <div className="sidebar-logo-box">FinLog</div>
-        <nav className="sidebar-nav">
-          <button
-            className={`nav-item${activeTab === 'home' ? ' active' : ''}`}
-            onClick={() => setActiveTab('home')}
-          >
-            🏠 Início
-          </button>
-          <button
-            className={`nav-item${activeTab === 'chat' ? ' active' : ''}`}
-            onClick={() => setActiveTab('chat')}
-          >
-            🤖 Assistente IA
-          </button>
-        </nav>
-        <button type="button" className="sidebar-user" onClick={confirmLogout} title="Sair">
-          <div className="avatar" aria-hidden="true">{avatarText}</div>
-          <div>
-            <div className="user-name">{user?.nome || 'Usuário'}</div>
-            <div className="logout-label">Clique para sair</div>
-          </div>
-        </button>
-      </aside>
+      <Sidebar view={view} onNavigate={setView} user={user} onUserClick={confirmLogout} />
 
-      {/* ─── MAIN ─── */}
-      <main className="main">
-
-        {/* ABA: CHATBOT */}
-        {activeTab === 'chat' && <ChatBot user={user} />}
-
-        {/* ABA: HOME */}
-        {activeTab === 'home' && (
-          <>
-            <h2 className="page-title">Página Inicial</h2>
-
-            {/* TOP ROW */}
-            <div className="row row-top">
-              <div className="saldo-card">
-                <div className="saldo-arrow">↗</div>
-                <div className="saldo-lbl">Seu Saldo</div>
-                <div className={`saldo-val${saldo < 0 ? ' neg' : ''}`}>{brl(saldo)}</div>
-                <div className="saldo-btns">
-                  <button className="saldo-btn" onClick={() => openLanc('entrada')}>Entrada +</button>
-                  <button className="saldo-btn" onClick={() => openLanc('saida')}>Saída –</button>
-                </div>
-              </div>
-
-              <div className="summary-card">
-                <div className="summary-nums">
-                  <div className="s-row">
-                    <div className="s-item">
-                      <label>Entradas</label>
-                      <div className="amt">{brl(entTotal)}</div>
-                    </div>
-                    <div className="s-item">
-                      <label>Saídas</label>
-                      <div className="amt">{brl(saiTotal)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="donut-wrap">
-                  <DonutChart entTotal={entTotal} saiTotal={saiTotal} />
-                </div>
-              </div>
-            </div>
-
-            {/* BOTTOM ROW */}
-            <div className="row row-bottom">
-
-              {/* METAS */}
-              <div className="card">
-                <div className="card-head">
-                  <div className="card-head-title">Suas Metas</div>
-                  <button className="icon-btn" onClick={() => openMetaModal(null)} aria-label="Adicionar meta">+</button>
-                </div>
-                <div className="metas-scroll">
-                  {metas.length === 0 ? (
-                    <div className="empty-msg">Nenhuma meta cadastrada.</div>
-                  ) : (
-                    metas.map(m => (
-                      <div className="meta-card" key={m.id}>
-                        <div className="meta-d">{m.desc}</div>
-                        <div className="meta-v">{brl(m.val)}</div>
-                        <div className="meta-act">
-                          <button className="edit-m" onClick={() => openMetaModal(m.id)} aria-label={`Editar meta ${m.desc}`}>✏</button>
-                          <button className="del-m"  onClick={() => delMeta(m.id)} aria-label={`Excluir meta ${m.desc}`}>🗑</button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* EXTRATO */}
-              <div className="card">
-                <div className="card-head">
-                  <div className="card-head-title">Seu Extrato</div>
-                  <div className="head-btns">
-                    <button
-                      className={`edit-toggle${editModeOn ? ' on' : ''}`}
-                      onClick={() => setEditModeOn(prev => !prev)}
-                    >
-                      {editModeOn ? '✓ Concluir' : '✏ Editar'}
-                    </button>
-                    <button className="icon-btn" onClick={() => openLanc('entrada')} aria-label="Novo lançamento">+</button>
-                  </div>
-                </div>
-
-                <div className="filter-bar">
-                  <select className="fsel" aria-label="Filtrar por tipo" value={filterType} onChange={e => setFilterType(e.target.value)}>
-                    <option value="all">Todos</option>
-                    <option value="entrada">Entradas</option>
-                    <option value="saida">Saídas</option>
-                  </select>
-                  <select className="fsel" aria-label="Filtrar por categoria" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
-                    <option value="all">Todas categorias</option>
-                    {cats.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                <div className="extrato-scroll">
-                  {loading ? (
-                    <div className="empty-msg">Carregando…</div>
-                  ) : loadError ? (
-                    <div className="empty-msg" role="alert">
-                      Não foi possível carregar seus dados.
-                      <div>
-                        <button className="link-btn" onClick={recarregar}>Tentar novamente</button>
-                      </div>
-                    </div>
-                  ) : filteredTxns.length === 0 ? (
-                    <div className="empty-msg">Nenhuma movimentação encontrada.</div>
-                  ) : (
-                    filteredTxns.map(t => (
-                      <div className="txn-row" key={t.id}>
-                        <div className="txn-left">
-                          <div className={`dot ${t.type}`} />
-                          <div>
-                            <div className="txn-name">{t.desc}</div>
-                            <div className="txn-sub">{t.cat} · {fmtDate(t.date)}</div>
-                          </div>
-                        </div>
-                        <div className="txn-right">
-                          <div className="txn-val">
-                            {t.type === 'saida' ? '–' : ''}{brl(t.val)}
-                          </div>
-                          {editModeOn && (
-                            <div className="txn-actions show">
-                              <button className="ea" onClick={() => openEditLanc(t)} aria-label={`Editar lançamento ${t.desc}`}>✏</button>
-                              <button className="da" onClick={() => delLanc(t.id)} aria-label={`Excluir lançamento ${t.desc}`}>🗑</button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </>
+      <main className="workspace" key={view}>
+        {view === 'home' && (
+          <Inicio
+            txns={txns}
+            metas={metas}
+            {...estado}
+            onNovoLanc={openLanc}
+            onVerExtrato={() => setView('extrato')}
+            onAddMeta={() => openMetaModal(null)}
+            onEditMeta={openMetaModal}
+            onDelMeta={delMeta}
+          />
         )}
 
+        {view === 'extrato' && (
+          <Extrato
+            txns={txns}
+            {...estado}
+            onNovoLanc={openLanc}
+            onEdit={openEditLanc}
+            onDelete={delLanc}
+          />
+        )}
+
+        {view === 'metas' && (
+          <Metas
+            metas={metas}
+            {...estado}
+            onAdd={() => openMetaModal(null)}
+            onEdit={openMetaModal}
+            onDelete={delMeta}
+          />
+        )}
+
+        {view === 'chat' && <ChatBot user={user} />}
+
+        {view === 'config' && <Configuracoes user={user} />}
       </main>
 
       {/* ═══ MODAL: NOVO LANÇAMENTO ═══ */}
@@ -501,14 +366,13 @@ function Dashboard({ user, onLogout }) {
         <LancamentoModal
           idPrefix="lanc"
           title="Novo lançamento"
+          subtitle="Registre uma entrada ou saída no seu extrato."
           form={lancForm}
           setForm={setLancForm}
           categorias={categorias}
           tipo={lancType}
           onTipoChange={setLancType}
-          descPlaceholder="Digite a descrição"
-          valPlaceholder="Digite o valor"
-          submitLabel="Confirmar"
+          submitLabel="Salvar lançamento"
           onSubmit={saveLanc}
           salvando={salvando}
           onClose={() => setLancModal(false)}
@@ -520,9 +384,12 @@ function Dashboard({ user, onLogout }) {
         <LancamentoModal
           idPrefix="edit-lanc"
           title="Editar lançamento"
+          subtitle="Atualize os dados deste lançamento"
           form={editLancForm}
           setForm={setEditLancForm}
           categorias={categorias}
+          tipo={editLancModal.type}
+          onTipoChange={type => setEditLancModal(m => ({ ...m, type }))}
           submitLabel="Salvar alterações"
           onSubmit={saveEditLanc}
           salvando={salvando}
@@ -532,35 +399,19 @@ function Dashboard({ user, onLogout }) {
 
       {/* ═══ MODAL: META ═══ */}
       {metaModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setMetaModal(false) }}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="meta-modal-title">
-            <button className="m-close" onClick={() => setMetaModal(false)} aria-label="Fechar">✕</button>
-            <div className="m-title" id="meta-modal-title">{editingMetaId ? 'Editar Meta' : 'Nova Meta'}</div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="meta-desc">Descrição:</label>
-              <input id="meta-desc" className="m-inp" type="text" maxLength={255} placeholder="Ex: Casa própria…" value={metaForm.desc} onChange={e => setMetaForm(f => ({ ...f, desc: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <label className="m-lbl" htmlFor="meta-val">Valor:</label>
-              <input id="meta-val" className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
-            </div>
-            <button className="m-btn" onClick={saveMeta} disabled={salvando}>Confirmar</button>
-          </div>
-        </div>
+        <MetaModal
+          editando={Boolean(editingMetaId)}
+          form={metaForm}
+          setForm={setMetaForm}
+          onSubmit={saveMeta}
+          salvando={salvando}
+          onClose={() => setMetaModal(false)}
+        />
       )}
 
       {/* ═══ MODAL: CONFIRMAÇÃO ═══ */}
       {confirmModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setConfirmModal(null) }}>
-          <div className="modal narrow" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-msg">
-            <div className="m-title" id="confirm-modal-title" style={{ fontSize: '19px' }}>{confirmModal.title || 'Confirmar exclusão'}</div>
-            <p className="conf-msg" id="confirm-modal-msg">{confirmModal.msg}</p>
-            <div className="conf-btns">
-              <button className="btn-cancel" onClick={() => setConfirmModal(null)}>Cancelar</button>
-              <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>{confirmModal.confirmLabel || 'Excluir'}</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal confirm={confirmModal} onClose={() => setConfirmModal(null)} />
       )}
 
       {/* ═══ TOAST ═══ */}
