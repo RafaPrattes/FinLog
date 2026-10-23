@@ -40,4 +40,24 @@ describe('ChatBot', () => {
 
     expect(await screen.findByText('Erro ao conectar com o assistente. Tente novamente.')).toBeInTheDocument()
   })
+
+  it('envia o texto da sugestão rápida ao clicar nela', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { resposta: 'Seu saldo líquido é R$ 100,00.' } })
+    const user = userEvent.setup()
+    render(<ChatBot user={{ nome: 'Ana' }} />)
+
+    await user.click(screen.getByRole('button', { name: 'Ver meu saldo líquido' }))
+
+    expect(api.post).toHaveBeenCalledWith('/ai/chat', { mensagem: 'Ver meu saldo líquido' })
+    expect(await screen.findByText('Seu saldo líquido é R$ 100,00.')).toBeInTheDocument()
+  })
+
+  it('mostra o horário das mensagens e as três sugestões do protótipo', () => {
+    render(<ChatBot user={{ nome: 'Ana' }} />)
+    expect(screen.getByText(/^Hoje, \d{2}:\d{2}$/)).toBeInTheDocument()
+    for (const s of ['Como criar uma Meta?', 'Ver meu saldo líquido', 'Onde estou gastando mais?']) {
+      expect(screen.getByRole('button', { name: s })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('button', { name: 'Exportar essa análise' })).not.toBeInTheDocument()
+  })
 })
