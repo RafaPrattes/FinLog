@@ -51,7 +51,6 @@ const PATHS = {
       <line x1="5" y1="12" x2="19" y2="12" />
     </>
   ),
-  minus: <line x1="5" y1="12" x2="19" y2="12" />,
   edit: (
     <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
   ),
@@ -64,7 +63,6 @@ const PATHS = {
       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </>
   ),
-  filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
   send: (
     <>
       <path d="M3 3l3 9-3 9 19-9z" />
@@ -81,29 +79,10 @@ const PATHS = {
       <path d="M9 13v2" />
     </>
   ),
-  'log-out': (
-    <>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </>
-  ),
   'arrow-up-right': (
     <>
       <line x1="7" y1="17" x2="17" y2="7" />
       <polyline points="7 7 17 7 17 17" />
-    </>
-  ),
-  'arrow-down-left': (
-    <>
-      <line x1="17" y1="7" x2="7" y2="17" />
-      <polyline points="17 17 7 17 7 7" />
-    </>
-  ),
-  user: (
-    <>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
     </>
   ),
 }

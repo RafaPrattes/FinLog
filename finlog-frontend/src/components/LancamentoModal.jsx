@@ -12,7 +12,7 @@ function LancamentoModal({
   categorias,
   tipo,
   onTipoChange,
-  descPlaceholder = 'Ex: Supermercado, salário…',
+  descPlaceholder = 'Ex.: Supermercado, salário, aluguel...',
   valPlaceholder = '0,00',
   submitLabel = 'Salvar lançamento',
   onSubmit,
