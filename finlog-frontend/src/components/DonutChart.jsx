@@ -1,40 +1,47 @@
+/* Rosca Entradas x Saídas. O conteúdo central (total) é sobreposto em HTML
+   por quem usa o gráfico. As cores vêm das classes em styles.css. */
 function DonutChart({ entTotal, saiTotal }) {
   const total = entTotal + saiTotal
-  const r     = 40
-  const cx    = 54
-  const cy    = 54
+  const size  = 240
+  const sw    = 28
+  const r     = (size - sw) / 2
+  const c     = size / 2
   const circ  = 2 * Math.PI * r
+
+  const label = total === 0
+    ? 'Sem movimentações'
+    : `Entradas ${Math.round((entTotal / total) * 100)}%, saídas ${Math.round((saiTotal / total) * 100)}%`
 
   if (total === 0) {
     return (
-      <svg width="108" height="108">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#DDD9D2" strokeWidth="15" />
+      <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
+        <circle cx={c} cy={c} r={r} fill="none" className="donut-empty" strokeWidth={sw} />
       </svg>
     )
   }
 
   const entArc = (entTotal / total) * circ
   const saiArc = (saiTotal / total) * circ
-  const offset = circ / 4
 
   return (
-    <svg width="108" height="108">
-      <circle
-        cx={cx} cy={cy} r={r}
-        fill="none" stroke="#8FA98B" strokeWidth="15"
-        strokeDasharray={`${entArc} ${circ - entArc}`}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-      />
-      {saiTotal > 0 && (
-        <circle
-          cx={cx} cy={cy} r={r}
-          fill="none" stroke="#C4A882" strokeWidth="15"
-          strokeDasharray={`${saiArc} ${circ - saiArc}`}
-          strokeDashoffset={offset - entArc}
-          strokeLinecap="round"
-        />
-      )}
+    <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
+      <g transform={`rotate(-90 ${c} ${c})`}>
+        {entTotal > 0 && (
+          <circle
+            cx={c} cy={c} r={r}
+            fill="none" className="donut-ent" strokeWidth={sw}
+            strokeDasharray={`${entArc} ${circ - entArc}`}
+          />
+        )}
+        {saiTotal > 0 && (
+          <circle
+            cx={c} cy={c} r={r}
+            fill="none" className="donut-sai" strokeWidth={sw}
+            strokeDasharray={`${saiArc} ${circ - saiArc}`}
+            strokeDashoffset={-entArc}
+          />
+        )}
+      </g>
     </svg>
   )
 }
