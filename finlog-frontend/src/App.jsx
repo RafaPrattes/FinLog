@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { setOnUnauthorized } from './service/api'
+import { lerToken, limparToken, salvarToken } from './service/session'
 
 import Login from './components/Login'
 import Register from './components/Register'
 import Dashboard from './components/Dashboard'
 
 function App() {
-  const [screen, setScreen] = useState(() => (localStorage.getItem('token') ? 'loading' : 'login'))
+  const [screen, setScreen] = useState(() => (lerToken() ? 'loading' : 'login'))
   const [currentUser, setCurrentUser] = useState(null)
   const [aviso, setAviso] = useState('')
 
-  function handleLogin(response) {
+  function handleLogin(response, lembrar = true) {
     const { usuario, token } = response
 
-    localStorage.setItem('token', token)
+    salvarToken(token, lembrar)
 
     setAviso('')
     setCurrentUser(usuario)
@@ -21,11 +22,21 @@ function App() {
   }
 
   const handleLogout = useCallback((mensagem = '') => {
-    localStorage.removeItem('token')
+    limparToken()
     setCurrentUser(null)
     setAviso(mensagem)
     setScreen('login')
   }, [])
+
+  /* Saída pedida pela pessoa: invalida o token no backend antes de descartá-lo */
+  async function handleUserLogout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      /* Mesmo que a API falhe, a sessão local é encerrada */
+    }
+    handleLogout()
+  }
 
   /* Sessão expirada ou token inválido: volta para o login */
   useEffect(() => {
@@ -67,7 +78,7 @@ function App() {
       {screen === 'dashboard' && (
         <Dashboard
           user={currentUser}
-          onLogout={() => handleLogout()}
+          onLogout={handleUserLogout}
         />
       )}
     </>

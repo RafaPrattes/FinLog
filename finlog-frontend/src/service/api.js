@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { lerToken } from './session'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
@@ -14,7 +15,7 @@ export function setOnUnauthorized(callback) {
 }
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
+  const token = lerToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -24,8 +25,9 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    const isLogin = error.config?.url?.includes('/auth/login')
-    if (error.response?.status === 401 && !isLogin && onUnauthorized) {
+    const url = error.config?.url || ''
+    const isAuth = url.includes('/auth/login') || url.includes('/auth/logout')
+    if (error.response?.status === 401 && !isAuth && onUnauthorized) {
       onUnauthorized()
     }
     return Promise.reject(error)

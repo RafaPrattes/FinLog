@@ -1,5 +1,7 @@
 package com.ucb.finlog.security;
 
+import com.ucb.finlog.model.Usuario;
+import com.ucb.finlog.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +17,11 @@ import java.util.List;
 @Component
 public class AuthTokenFilter extends OncePerRequestFilter {
     private final AuthTokenService authTokenService;
+    private final UsuarioRepository usuarioRepository;
 
-    public AuthTokenFilter(AuthTokenService authTokenService) {
+    public AuthTokenFilter(AuthTokenService authTokenService, UsuarioRepository usuarioRepository) {
         this.authTokenService = authTokenService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -28,7 +32,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         if (authorization != null && authorization.startsWith("Bearer ")) {
             String token = authorization.substring(7);
             try {
-                UsuarioAutenticado usuario = authTokenService.validarToken(token);
+                UsuarioAutenticado usuario = autenticar(token);
                 var authentication = new UsernamePasswordAuthenticationToken(usuario, null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (IllegalArgumentException exception) {
@@ -37,5 +41,17 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private UsuarioAutenticado autenticar(String token) {
+        TokenValidado tokenValidado = authTokenService.validarToken(token);
+        Usuario usuario = usuarioRepository.findById(tokenValidado.usuarioId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario do token nao existe"));
+
+        if (usuario.getTokenVersion() != tokenValidado.versao()) {
+            throw new IllegalArgumentException("Token revogado");
+        }
+
+        return new UsuarioAutenticado(usuario.getId(), usuario.getEmail());
     }
 }

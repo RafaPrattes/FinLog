@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import api from '../service/api'
+import { mensagemErro } from '../service/errors'
 
 function Login({ aviso = '', goToRegister, onLogin }) {
   const [userInput, setUserInput] = useState('')
@@ -8,6 +9,7 @@ function Login({ aviso = '', goToRegister, onLogin }) {
   const [userErr,   setUserErr]   = useState(false)
   const [passErr,   setPassErr]   = useState(false)
   const [loading,   setLoading]   = useState(false)
+  const [lembrar,   setLembrar]   = useState(true)
 
   async function handleLogin() {
     setError('')
@@ -27,11 +29,16 @@ function Login({ aviso = '', goToRegister, onLogin }) {
     try {
       setLoading(true)
       const { data } = await api.post('/auth/login', { email: u, senha: p })
-      onLogin(data)
-    } catch {
-      setError('Usuário ou senha inválidos.')
-      setUserErr(true)
-      setPassErr(true)
+      onLogin(data, lembrar)
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 401) {
+        setError('Usuário ou senha inválidos.')
+        setUserErr(true)
+        setPassErr(true)
+      } else {
+        setError(mensagemErro(err, 'Não foi possível entrar. Tente novamente.'))
+      }
     } finally {
       setLoading(false)
     }
@@ -52,15 +59,19 @@ function Login({ aviso = '', goToRegister, onLogin }) {
         )}
 
         <input
-          type="text"
+          type="email"
+          autoComplete="email"
+          aria-label="E-mail"
           className={`field${userErr ? ' err' : ''}`}
-          placeholder="Usuário"
+          placeholder="E-mail"
           value={userInput}
           onChange={e => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
         />
         <input
           type="password"
+          autoComplete="current-password"
+          aria-label="Senha"
           className={`field${passErr ? ' err' : ''}`}
           placeholder="Senha"
           value={password}
@@ -69,8 +80,13 @@ function Login({ aviso = '', goToRegister, onLogin }) {
         />
 
         <div className="remember-row">
-          <input type="checkbox" id="remember" defaultChecked />
-          <label htmlFor="remember">Permanecer Conectado</label>
+          <input
+            type="checkbox"
+            id="remember"
+            checked={lembrar}
+            onChange={e => setLembrar(e.target.checked)}
+          />
+          <label htmlFor="remember">Permanecer conectado</label>
         </div>
 
         <button className="btn-main" onClick={handleLogin} disabled={loading}>

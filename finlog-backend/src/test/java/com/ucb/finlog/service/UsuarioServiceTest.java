@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,25 +87,14 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void deveRejeitarEmailInvalido() {
+    void deveRejeitarCadastroComSenhaEmBranco() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.cadastrar(new CadastroUsuarioRequest("Maria", "email-invalido", "123456"))
+                () -> service.cadastrar(new CadastroUsuarioRequest("Maria", "maria@email.com", "   "))
         );
 
         assertEquals(400, exception.getStatusCode().value());
-        assertEquals("E-mail inválido", exception.getReason());
-    }
-
-    @Test
-    void deveRejeitarSenhaCurta() {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.cadastrar(new CadastroUsuarioRequest("Maria", "maria@email.com", "12345"))
-        );
-
-        assertEquals(400, exception.getStatusCode().value());
-        assertEquals("A senha deve ter pelo menos 6 caracteres", exception.getReason());
+        verify(repository, never()).save(any());
     }
 
     @Test

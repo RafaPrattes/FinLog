@@ -149,6 +149,7 @@ public class ApiExceptionHandler {
             case NOT_FOUND -> "Nao encontrado";
             case CONFLICT -> "Conflito";
             case METHOD_NOT_ALLOWED -> "Metodo nao permitido";
+            case TOO_MANY_REQUESTS -> "Muitas tentativas";
             case INTERNAL_SERVER_ERROR -> "Erro interno do servidor";
             default -> status.getReasonPhrase();
         };

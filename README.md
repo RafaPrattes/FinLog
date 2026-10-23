@@ -15,26 +15,26 @@ O projeto adota o modelo de Arquitetura 4+1 de Philippe Kruchten , organizando a
 ## 🚀 Funcionalidades (MVP)
 Com base nos casos de uso identificados no DAS:
 
-- Autenticação (UC01 & UC02): Login e logout seguros com geração de tokens de sessão.
+- Autenticação (UC01 & UC02): Cadastro, login com token assinado (HMAC) e logout que invalida o token no servidor. Limite de tentativas de login e opção "Permanecer conectado".
 
-- Gestão de Movimentações (UC03 a UC08): CRUD completo (Registo, Edição e Exclusão) de receitas e despesas .
+- Gestão de Movimentações (UC03 a UC08): CRUD completo (Registro, Edição e Exclusão) de receitas e despesas, com categorias por usuário.
 
-- Dashboard Consolidado (UC09): Resumo financeiro com saldo total, entradas, saídas e indicadores visuais.
+- Dashboard Consolidado (UC09): Resumo financeiro com saldo total, entradas, saídas e gráfico.
 
-- Filtros de Análise (UC10): Consulta de transações por período, categoria ou tipo.
+- Filtros de Análise (UC10): Consulta de transações por tipo e por categoria. *(Filtro por período ainda não implementado.)*
 
-- Metas Financeiras (UC11): Definição de objetivos de economia com prazos e valores alvo.
+- Metas Financeiras (UC11): Cadastro, edição e exclusão de metas com valor alvo, salvas por usuário. *(Prazo ainda não implementado.)*
 
-- Conselheiro Financeiro (IA): Recurso inovador integrado ao Dashboard para análise preditiva e conselhos personalizados.
+- Assistente Financeiro (IA): Chat integrado ao Dashboard que responde às perguntas do usuário usando o resumo das suas finanças (Google Gemini).
 
 ## 🛠️ Stack Tecnológica
 O sistema é construído sobre uma base tecnológica robusta e escalável:
 
-- Frontend: React (biblioteca JavaScript) para interfaces dinâmicas e responsivas.
+- Frontend: React + Vite (`finlog-frontend`), testado com Vitest e Testing Library.
 
-- Backend: Java com framework Spring para a construção da API e lógica de negócio.
+- Backend: Java 21 com Spring Boot (`finlog-backend`), testado com JUnit e Mockito.
 
-- Banco de Dados: MySQL (relacional) para persistência segura das informações.
+- Banco de Dados: MySQL, rodando via Docker Compose.
 
 - Internacionalização (i18n): Suporte à formatação de valores monetários conforme a localidade do utilizador.
 
@@ -44,7 +44,18 @@ O sistema é construído sobre uma base tecnológica robusta e escalável:
 
 - Segurança (RNF003): Credenciais protegidas por hash criptográfico e conformidade com a LGPD.
 
-- Confiabilidade: Realização de backups automáticos e integridade de dados garantida por testes automatizados.
+- Confiabilidade: Testes automatizados no backend e no frontend, executados no GitHub Actions a cada pull request.
+
+## ▶️ Como rodar
+O passo a passo completo (Docker, `.env`, chave da Gemini e frontend) está em [COMO-RODAR.md](COMO-RODAR.md).
+
+Resumo:
+1. `cd finlog-backend`, copie `.env.example` para `.env` e preencha `GEMINI_API_KEY` e `APP_AUTH_TOKEN_SECRET` (32+ caracteres aleatórios).
+2. `docker compose up --build` (backend em http://localhost:8080).
+3. Em outro terminal: `cd finlog-frontend`, `npm ci` e `npm run dev` (http://localhost:5173).
+
+Testes: `./mvnw test` em `finlog-backend` e `npm test` em `finlog-frontend`.
+
 ## 👥 Colaboradores
 
 <table>

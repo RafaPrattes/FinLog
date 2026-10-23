@@ -1,7 +1,11 @@
 package com.ucb.finlog.controller;
 
+import com.ucb.finlog.dto.AIAdviceResponse;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
+import com.ucb.finlog.dto.CategoriaDTO;
+import com.ucb.finlog.dto.CategoriaRequest;
+import com.ucb.finlog.dto.CategoriaResumoDTO;
 import com.ucb.finlog.dto.ChatRequest;
 import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.dto.LoginRequest;
@@ -17,6 +21,7 @@ import com.ucb.finlog.model.Usuario;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.AIService;
 import com.ucb.finlog.service.AuthService;
+import com.ucb.finlog.service.CategoriaService;
 import com.ucb.finlog.service.MetaService;
 import com.ucb.finlog.service.MovimentacaoService;
 import com.ucb.finlog.service.UsuarioService;
@@ -40,6 +45,11 @@ class ControllersTest {
 
         assertEquals("FinLog backend em execucao", response.get("status"));
         assertTrue(((List<?>) response.get("endpointsPublicos")).contains("POST /api/cadastro"));
+        List<?> autenticados = (List<?>) response.get("endpointsAutenticados");
+        assertTrue(autenticados.contains("POST /api/auth/logout"));
+        assertTrue(autenticados.contains("GET /api/categorias/resumo"));
+        assertTrue(autenticados.contains("DELETE /api/movimentacoes/{id}"));
+        assertTrue(autenticados.contains("PUT /api/metas/{id}"));
     }
 
     @Test
@@ -53,8 +63,9 @@ class ControllersTest {
         AuthController controller = new AuthController(service);
 
         assertEquals(authResponse, controller.login(request));
-        controller.logout();
+        controller.logout(new UsuarioAutenticado(1L, "maria@email.com"));
         verify(service).login(request);
+        verify(service).logout(1L);
     }
 
     @Test
@@ -140,11 +151,43 @@ class ControllersTest {
     }
 
     @Test
+    void categoriaControllerDeveDelegarOperacoes() {
+        CategoriaService service = mock(CategoriaService.class);
+        UsuarioAutenticado usuario = new UsuarioAutenticado(1L, "maria@email.com");
+        CategoriaRequest request = new CategoriaRequest("Mercado", "Compras");
+        CategoriaDTO dto = new CategoriaDTO();
+        dto.setId(3L);
+        dto.setNome("Mercado");
+        CategoriaResumoDTO resumo = new CategoriaResumoDTO(3L, "Mercado", null, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN.negate());
+
+        when(service.listarTodas("maria@email.com")).thenReturn(List.of(dto));
+        when(service.buscarPorId(3L, "maria@email.com")).thenReturn(dto);
+        when(service.criar(request, "maria@email.com")).thenReturn(dto);
+        when(service.atualizar(3L, request, "maria@email.com")).thenReturn(dto);
+        when(service.resumo("maria@email.com")).thenReturn(List.of(resumo));
+        when(service.resumoPorId(3L, "maria@email.com")).thenReturn(resumo);
+
+        CategoriaController controller = new CategoriaController(service);
+
+        assertEquals(List.of(dto), controller.listar(usuario));
+        assertEquals(dto, controller.buscar(3L, usuario));
+        assertEquals(dto, controller.criar(request, usuario));
+        assertEquals(dto, controller.atualizar(3L, request, usuario));
+        assertEquals(List.of(resumo), controller.resumo(usuario));
+        assertEquals(resumo, controller.resumoPorId(3L, usuario));
+        controller.deletar(3L, usuario);
+        verify(service).deletar(3L, "maria@email.com");
+    }
+
+    @Test
     void aiControllerDeveRetornarConselho() {
         AIService service = mock(AIService.class);
         when(service.obterConselhoIA("maria@email.com")).thenReturn("Poupe mais.");
 
-        assertEquals("Poupe mais.", new AIController(service).pegarConselho(new UsuarioAutenticado(1L, "maria@email.com")));
+        assertEquals(
+                new AIAdviceResponse("Poupe mais."),
+                new AIController(service).pegarConselho(new UsuarioAutenticado(1L, "maria@email.com"))
+        );
     }
 
     @Test
