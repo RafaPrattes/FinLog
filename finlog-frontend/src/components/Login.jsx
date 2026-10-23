@@ -50,53 +50,57 @@ function Login({ aviso = '', goToRegister, onLogin }) {
 
   return (
     <div id="screen-login" className="screen active">
-      <div className="auth-card">
-        <div className="brand">FinLog</div>
-        <div className="sub">Login</div>
+      <main className="auth-card">
+        <header className="auth-head">
+          <h1 className="brand">FinLog</h1>
+          <h2 className="sub">Login</h2>
+        </header>
 
-        {error && (
-          <div className="err-msg" style={{ display: 'block' }}>{error}</div>
-        )}
+        <div className="auth-form">
+          {error && (
+            <div className="err-msg" role="alert">{error}</div>
+          )}
 
-        <input
-          type="email"
-          autoComplete="email"
-          aria-label="E-mail"
-          className={`field${userErr ? ' err' : ''}`}
-          placeholder="E-mail"
-          value={userInput}
-          onChange={e => setUserInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <input
-          type="password"
-          autoComplete="current-password"
-          aria-label="Senha"
-          className={`field${passErr ? ' err' : ''}`}
-          placeholder="Senha"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-
-        <div className="remember-row">
           <input
-            type="checkbox"
-            id="remember"
-            checked={lembrar}
-            onChange={e => setLembrar(e.target.checked)}
+            type="email"
+            autoComplete="email"
+            aria-label="E-mail"
+            className={`field${userErr ? ' err' : ''}`}
+            placeholder="E-mail"
+            value={userInput}
+            onChange={e => setUserInput(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <label htmlFor="remember">Permanecer conectado</label>
+          <input
+            type="password"
+            autoComplete="current-password"
+            aria-label="Senha"
+            className={`field${passErr ? ' err' : ''}`}
+            placeholder="Senha"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+
+          <div className="remember-row">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={lembrar}
+              onChange={e => setLembrar(e.target.checked)}
+            />
+            <label htmlFor="remember">Permanecer Conectado</label>
+          </div>
+
+          <button type="button" className="btn-main" onClick={handleLogin} disabled={loading}>
+            {loading ? 'Entrando…' : 'Login'}
+          </button>
+
+          <button type="button" className="link-btn auth-link" onClick={goToRegister}>
+            Não tem cadastro? Clique aqui
+          </button>
         </div>
-
-        <button className="btn-main" onClick={handleLogin} disabled={loading}>
-          {loading ? 'Entrando…' : 'Login'}
-        </button>
-
-        <button className="link-btn" onClick={goToRegister}>
-          Não tem cadastro? Clique aqui
-        </button>
-      </div>
+      </main>
     </div>
   )
 }

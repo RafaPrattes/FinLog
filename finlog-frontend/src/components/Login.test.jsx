@@ -61,7 +61,7 @@ describe('Login', () => {
     render(<Login goToRegister={() => {}} onLogin={onLogin} />)
 
     await preencher(user)
-    await user.click(screen.getByLabelText('Permanecer conectado'))
+    await user.click(screen.getByLabelText('Permanecer Conectado'))
     await user.click(screen.getByRole('button', { name: 'Login' }))
 
     expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'ana@exemplo.com', senha: 'segredo123' })
