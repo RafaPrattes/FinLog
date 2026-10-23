@@ -429,13 +429,20 @@ ul { list-style: none; }
 .txn-table td { height: 4rem; padding: 0 1.5rem; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .txn-table tbody tr:last-child td { border-bottom: none; }
 .txn-table tbody tr:hover td { background: #FBFCFB; }
-.txn-table .col-dot { width: 3.75rem; padding-right: 0; }
-.txn-table .col-date { width: 9rem; font-size: .875rem; color: var(--text-mid); white-space: nowrap; }
-.txn-table .col-desc { font-size: 1rem; line-height: 1.5rem; font-weight: 500; color: var(--brown); overflow-wrap: anywhere; }
+.txn-table .col-dot { width: 3.5rem; padding-right: 0; }
+.txn-table .col-dot .dot { display: inline-block; vertical-align: middle; }
+.txn-table .col-date { width: 9rem; white-space: nowrap; }
+.txn-table td.col-date { font-size: .875rem; color: var(--text-mid); }
+.txn-table td.col-desc {
+  position: relative; padding-right: 6rem;
+  font-size: 1rem; line-height: 1.5rem; font-weight: 500; color: var(--brown); overflow-wrap: anywhere;
+}
 .txn-table .col-cat { width: 11.5rem; text-align: center; }
 .txn-table .col-val { width: 11rem; text-align: right; }
-.txn-table .col-act { width: 6rem; padding-left: 0; text-align: right; }
-.row-actions { display: inline-flex; gap: .375rem; opacity: 0; transition: opacity .2s; }
+.row-actions {
+  position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+  display: inline-flex; gap: .375rem; opacity: 0; transition: opacity .2s;
+}
 .txn-table tbody tr:hover .row-actions,
 .row-actions:focus-within { opacity: 1; }
 @media (hover: none) { .row-actions { opacity: 1; } }

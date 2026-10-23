@@ -112,7 +112,6 @@ function Extrato({ txns, loading, loadError, onRetry, onNovoLanc, onEdit, onDele
                   <th className="col-desc">Descrição</th>
                   <th className="col-cat">Categoria</th>
                   <th className="col-val">Valor</th>
-                  <th className="col-act no-print"><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -123,11 +122,9 @@ function Extrato({ txns, loading, loadError, onRetry, onNovoLanc, onEdit, onDele
                       <span className="sr-only">{t.type === 'entrada' ? 'Entrada' : 'Saída'}</span>
                     </td>
                     <td className="col-date" title={fmtDate(t.date)}>{labelData(t.date)}</td>
-                    <td className="col-desc">{t.desc}</td>
-                    <td className="col-cat"><span className="tag">{t.cat}</span></td>
-                    <td className={`col-val amount ${t.type}`}>{brlSinal(t.type, t.val)}</td>
-                    <td className="col-act no-print">
-                      <div className="row-actions">
+                    <td className="col-desc">
+                      {t.desc}
+                      <div className="row-actions no-print">
                         <button type="button" className="icon-btn sm" onClick={() => onEdit(t)} aria-label={`Editar lançamento ${t.desc}`}>
                           <Icon name="edit" size={16} />
                         </button>
@@ -136,6 +133,8 @@ function Extrato({ txns, loading, loadError, onRetry, onNovoLanc, onEdit, onDele
                         </button>
                       </div>
                     </td>
+                    <td className="col-cat"><span className="tag">{t.cat}</span></td>
+                    <td className={`col-val amount ${t.type}`}>{brlSinal(t.type, t.val)}</td>
                   </tr>
                 ))}
               </tbody>
