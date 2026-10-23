@@ -419,7 +419,8 @@ ul { list-style: none; }
 .custom-range label { font-size: .875rem; color: var(--brown); }
 
 .table-card { padding: 0; overflow: hidden; }
-.table-scroll { overflow-x: auto; }
+/* position: relative prende o .sr-only (absoluto) do cabeçalho dentro da rolagem; sem ele a página inteira estica no celular */
+.table-scroll { overflow-x: auto; position: relative; }
 .txn-table { width: 100%; border-collapse: collapse; min-width: 44rem; }
 .txn-table th {
   text-align: left; font-size: .875rem; line-height: 1.3125rem; font-weight: 500;
