@@ -24,6 +24,24 @@ function ChatBot({ user }) {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
 
+  /* Recupera a conversa desta sessão (fica salva no backend até o logout) */
+  useEffect(() => {
+    let ativo = true
+    api.get('/ai/chat')
+      .then(({ data }) => {
+        if (!ativo || !Array.isArray(data) || data.length === 0) return
+        const anteriores = data.map(m => ({
+          role: m.papel === 'USUARIO' ? 'user' : 'assistant',
+          text: m.texto,
+          at:   new Date(m.criadaEm),
+        }))
+        // saudação no topo, histórico em seguida e, por último, o que já foi enviado enquanto carregava
+        setMessages(prev => [{ ...prev[0], at: anteriores[0].at }, ...anteriores, ...prev.slice(1)])
+      })
+      .catch(() => {})
+    return () => { ativo = false }
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])

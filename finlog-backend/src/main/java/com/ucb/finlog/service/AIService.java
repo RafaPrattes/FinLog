@@ -1,10 +1,18 @@
 package com.ucb.finlog.service;
 
+import com.ucb.finlog.dto.ChatMensagemResponse;
 import com.ucb.finlog.dto.GeminiRequest;
 import com.ucb.finlog.dto.GeminiResponse;
+import com.ucb.finlog.model.ChatMensagem;
+import com.ucb.finlog.model.Meta;
 import com.ucb.finlog.model.Movimentacao;
+import com.ucb.finlog.model.PapelMensagem;
 import com.ucb.finlog.model.TipoMovimentacao;
+import com.ucb.finlog.model.Usuario;
+import com.ucb.finlog.repository.ChatMensagemRepository;
+import com.ucb.finlog.repository.MetaRepository;
 import com.ucb.finlog.repository.MovimentacaoRepository;
+import com.ucb.finlog.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +24,8 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -37,10 +47,22 @@ public class AIService {
 
     private final RestTemplate restTemplate;
     private final MovimentacaoRepository repository;
+    private final MetaRepository metaRepository;
+    private final ChatMensagemRepository chatRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public AIService(RestTemplate restTemplate, MovimentacaoRepository repository) {
+    public AIService(
+            RestTemplate restTemplate,
+            MovimentacaoRepository repository,
+            MetaRepository metaRepository,
+            ChatMensagemRepository chatRepository,
+            UsuarioRepository usuarioRepository
+    ) {
         this.restTemplate = restTemplate;
         this.repository = repository;
+        this.metaRepository = metaRepository;
+        this.chatRepository = chatRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public String obterConselhoIA(String emailUsuario) {
@@ -51,34 +73,93 @@ public class AIService {
         }
 
         ResumoFinanceiro resumo = resumir(dados);
+        String metas = descreverMetas(metaRepository.findByUsuarioEmailOrderByIdAsc(emailUsuario), resumo.saldo());
         String prompt = "Voce e um mentor financeiro do app FinLog. " +
                 "Analise este resumo: " + resumo.texto() + ". " +
                 "Ultimas transacoes: " + resumo.ultimasTransacoes() + ". " +
+                metas + " " +
                 "De um conselho pratico e motivador de no maximo 40 palavras, focando em reduzir gastos em " +
-                resumo.categoriaComMaiorGasto() + " ou aproveitar melhor as receitas.";
+                resumo.categoriaComMaiorGasto() + " ou aproveitar melhor as receitas para alcancar as metas.";
 
-        String texto = chamarGemini(prompt);
+        String texto = chamarGemini(List.of(conteudo("user", prompt)));
         return texto != null ? texto : "Continue acompanhando seus gastos para um futuro melhor!";
     }
 
+    public List<ChatMensagemResponse> historico(String emailUsuario) {
+        return chatRepository.findByUsuarioEmailOrderByIdAsc(emailUsuario).stream()
+                .map(ChatMensagemResponse::from)
+                .toList();
+    }
+
     public String responderPergunta(String emailUsuario, String pergunta) {
+        Instant perguntadaEm = Instant.now();
         List<Movimentacao> dados = repository.findByUsuarioEmail(emailUsuario);
 
         String contexto = "O usuario ainda nao registrou transacoes.";
+        BigDecimal saldo = BigDecimal.ZERO;
         if (!dados.isEmpty()) {
             ResumoFinanceiro resumo = resumir(dados);
             contexto = "Resumo: " + resumo.texto() + ". Ultimas transacoes: " + resumo.ultimasTransacoes() + ".";
+            saldo = resumo.saldo();
         }
+        contexto += " " + descreverMetas(metaRepository.findByUsuarioEmailOrderByIdAsc(emailUsuario), saldo);
 
         String prompt = "Voce e o assistente financeiro do app FinLog. " +
                 "Dados do usuario: " + contexto + " " +
+                "No FinLog, metas sao criadas na tela Metas (botao \"Nova meta\") e lancamentos pelo botao \"Novo lancamento\". " +
                 "Pergunta do usuario: \"" + pergunta.trim() + "\". " +
                 "Responda em portugues, de forma pratica e objetiva, em no maximo 80 palavras, " +
-                "usando os dados do usuario quando forem relevantes. " +
+                "usando os dados do usuario e as mensagens anteriores da conversa quando forem relevantes. " +
                 "Se a pergunta nao for sobre financas pessoais, explique gentilmente que so pode ajudar com financas.";
 
-        String texto = chamarGemini(prompt);
-        return texto != null ? texto : "Nao consegui gerar uma resposta agora. Tente reformular a pergunta.";
+        // As mensagens anteriores vao como turnos da conversa para a IA lembrar do contexto
+        List<GeminiRequest.Content> conversa = new ArrayList<>();
+        chatRepository.findTop10ByUsuarioEmailOrderByIdDesc(emailUsuario).reversed().forEach(m ->
+                conversa.add(conteudo(m.getPapel() == PapelMensagem.USUARIO ? "user" : "model", m.getTexto())));
+        conversa.add(conteudo("user", prompt));
+
+        String texto = chamarGemini(conversa);
+        if (texto == null) {
+            return "Nao consegui gerar uma resposta agora. Tente reformular a pergunta.";
+        }
+        if (!ERRO_CONEXAO.equals(texto)) {
+            salvarTroca(emailUsuario, pergunta.trim(), perguntadaEm, texto);
+        }
+        return texto;
+    }
+
+    private void salvarTroca(String emailUsuario, String pergunta, Instant perguntadaEm, String resposta) {
+        usuarioRepository.findByEmail(emailUsuario).ifPresent(usuario -> chatRepository.saveAll(List.of(
+                mensagem(usuario, PapelMensagem.USUARIO, pergunta, perguntadaEm),
+                mensagem(usuario, PapelMensagem.IA, resposta, Instant.now())
+        )));
+    }
+
+    private ChatMensagem mensagem(Usuario usuario, PapelMensagem papel, String texto, Instant criadaEm) {
+        ChatMensagem mensagem = new ChatMensagem();
+        mensagem.setUsuario(usuario);
+        mensagem.setPapel(papel);
+        mensagem.setTexto(texto.length() > ChatMensagem.TAMANHO_MAXIMO_TEXTO
+                ? texto.substring(0, ChatMensagem.TAMANHO_MAXIMO_TEXTO)
+                : texto);
+        mensagem.setCriadaEm(criadaEm);
+        return mensagem;
+    }
+
+    private String descreverMetas(List<Meta> metas, BigDecimal saldo) {
+        if (metas.isEmpty()) {
+            return "O usuario ainda nao cadastrou metas.";
+        }
+        BigDecimal disponivel = saldo.max(BigDecimal.ZERO);
+        return "Metas do usuario (quanto falta e calculado com o saldo atual, para cada meta separadamente): " +
+                metas.stream()
+                        .map(m -> {
+                            BigDecimal falta = m.getValor().subtract(disponivel);
+                            return falta.signum() > 0
+                                    ? String.format(PT_BR, "%s: R$%.2f (faltam R$%.2f)", m.getDescricao(), m.getValor(), falta)
+                                    : String.format(PT_BR, "%s: R$%.2f (ja coberta pelo saldo)", m.getDescricao(), m.getValor());
+                        })
+                        .collect(Collectors.joining(" | ")) + ".";
     }
 
     private ResumoFinanceiro resumir(List<Movimentacao> dados) {
@@ -133,15 +214,15 @@ public class AIService {
                 ))
                 .collect(Collectors.joining(" | "));
 
-        return new ResumoFinanceiro(texto, categoriaComMaiorGasto, ultimasTransacoes);
+        return new ResumoFinanceiro(texto, categoriaComMaiorGasto, ultimasTransacoes, saldo);
     }
 
-    private String chamarGemini(String prompt) {
-        var request = new GeminiRequest(List.of(
-                new GeminiRequest.Content(List.of(
-                        new GeminiRequest.Part(prompt)
-                ))
-        ));
+    private static GeminiRequest.Content conteudo(String role, String texto) {
+        return new GeminiRequest.Content(role, List.of(new GeminiRequest.Part(texto)));
+    }
+
+    private String chamarGemini(List<GeminiRequest.Content> conversa) {
+        var request = new GeminiRequest(conversa);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -179,6 +260,6 @@ public class AIService {
         return parte.text();
     }
 
-    private record ResumoFinanceiro(String texto, String categoriaComMaiorGasto, String ultimasTransacoes) {
+    private record ResumoFinanceiro(String texto, String categoriaComMaiorGasto, String ultimasTransacoes, BigDecimal saldo) {
     }
 }

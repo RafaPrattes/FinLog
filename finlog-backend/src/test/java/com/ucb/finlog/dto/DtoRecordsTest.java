@@ -14,7 +14,7 @@ class DtoRecordsTest {
     @Test
     void deveExporDadosDosRecordsDoGeminiEDoErro() {
         GeminiRequest request = new GeminiRequest(List.of(
-                new GeminiRequest.Content(List.of(new GeminiRequest.Part("prompt")))
+                new GeminiRequest.Content("user", List.of(new GeminiRequest.Part("prompt")))
         ));
         GeminiResponse response = new GeminiResponse(List.of(
                 new GeminiResponse.Candidate(new GeminiResponse.Content(List.of(new GeminiResponse.Part("texto"))))
@@ -22,6 +22,7 @@ class DtoRecordsTest {
         ApiErrorResponse error = new ApiErrorResponse(400, "Requisição inválida", "Mensagem", "/api");
 
         assertEquals("prompt", request.contents().getFirst().parts().getFirst().text());
+        assertEquals("user", request.contents().getFirst().role());
         assertEquals("texto", response.candidates().getFirst().content().parts().getFirst().text());
         assertEquals("/api", error.path());
     }

@@ -1,6 +1,7 @@
 package com.ucb.finlog.controller;
 
 import com.ucb.finlog.dto.AIAdviceResponse;
+import com.ucb.finlog.dto.ChatMensagemResponse;
 import com.ucb.finlog.dto.ChatRequest;
 import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.security.UsuarioAutenticado;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -25,6 +28,11 @@ public class AIController {
     @GetMapping("/conselho")
     public AIAdviceResponse pegarConselho(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return new AIAdviceResponse(aiService.obterConselhoIA(usuario.email()));
+    }
+
+    @GetMapping("/chat")
+    public List<ChatMensagemResponse> historico(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return aiService.historico(usuario.email());
     }
 
     @PostMapping("/chat")
