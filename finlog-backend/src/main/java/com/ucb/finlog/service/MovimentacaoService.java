@@ -9,11 +9,13 @@ import com.ucb.finlog.repository.MovimentacaoRepository;
 import com.ucb.finlog.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class MovimentacaoService {
     private final MovimentacaoRepository repository;
     private final UsuarioRepository usuarioRepository;

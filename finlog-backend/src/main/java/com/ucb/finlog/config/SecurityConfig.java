@@ -2,6 +2,7 @@ package com.ucb.finlog.config;
 
 import com.ucb.finlog.security.AuthTokenFilter;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,15 +24,26 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private final AuthTokenFilter authTokenFilter;
+    static final String ORIGENS_PADRAO = "http://localhost:5173,http://localhost:5174";
 
-    public SecurityConfig(AuthTokenFilter authTokenFilter) {
+    private final AuthTokenFilter authTokenFilter;
+    private final List<String> allowedOrigins;
+
+    public SecurityConfig(
+            AuthTokenFilter authTokenFilter,
+            @Value("${app.cors.allowed-origins:" + ORIGENS_PADRAO + "}") String allowedOrigins
+    ) {
         this.authTokenFilter = authTokenFilter;
+        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origem -> !origem.isEmpty())
+                .toList();
     }
 
     @Bean
@@ -57,13 +69,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:5174"
-        ));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Content-Type", "Authorization"));
-        configuration.setAllowCredentials(true);
+        // A autenticacao usa o header Authorization (Bearer), sem cookies.
+        configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

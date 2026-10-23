@@ -3,6 +3,7 @@ package com.ucb.finlog.controller;
 import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.UsuarioResponse;
 import com.ucb.finlog.service.UsuarioService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,7 @@ public class CadastroController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UsuarioResponse cadastrar(@RequestBody CadastroUsuarioRequest request) {
+    public UsuarioResponse cadastrar(@Valid @RequestBody CadastroUsuarioRequest request) {
         return UsuarioResponse.from(service.cadastrar(request));
     }
 }

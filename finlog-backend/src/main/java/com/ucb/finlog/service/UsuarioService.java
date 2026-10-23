@@ -6,11 +6,11 @@ import com.ucb.finlog.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 @Service
+@Transactional
 public class UsuarioService {
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
@@ -21,7 +21,11 @@ public class UsuarioService {
     }
 
     public Usuario cadastrar(CadastroUsuarioRequest request) {
-        validarCadastro(request);
+        // Formato e tamanho dos campos sao validados por Bean Validation no controller;
+        // aqui so garantimos que o servico nao receba dados ausentes.
+        if (request == null || isBlank(request.nome()) || isBlank(request.email()) || isBlank(request.senha())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome, e-mail e senha são obrigatórios");
+        }
 
         String email = request.email().trim().toLowerCase();
         if (repository.existsByEmail(email)) {
@@ -38,28 +42,6 @@ public class UsuarioService {
     public Usuario buscarPorEmail(String email) {
         return repository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
-    }
-
-    public List<Usuario> listarTodos() {
-        return repository.findAll();
-    }
-
-    private void validarCadastro(CadastroUsuarioRequest request) {
-        if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome, e-mail e senha são obrigatórios");
-        }
-
-        if (isBlank(request.nome()) || isBlank(request.email()) || isBlank(request.senha())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome, e-mail e senha são obrigatórios");
-        }
-
-        if (!request.email().contains("@")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail inválido");
-        }
-
-        if (request.senha().length() < 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A senha deve ter pelo menos 6 caracteres");
-        }
     }
 
     private boolean isBlank(String value) {

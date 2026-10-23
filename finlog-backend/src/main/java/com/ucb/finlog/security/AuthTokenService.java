@@ -1,40 +1,58 @@
 package com.ucb.finlog.security;
 
 import com.ucb.finlog.model.Usuario;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 
+/**
+ * Tokens no formato {@code base64url(id:versao:expiracao).assinaturaHmac}. O e-mail nao entra no
+ * payload: o usuario e carregado pelo id a cada requisicao e a versao permite revogar tokens no logout.
+ */
 @Service
 public class AuthTokenService {
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final int TAMANHO_MINIMO_SEGREDO = 32;
 
-    @Value("${app.auth.token-secret:${APP_AUTH_TOKEN_SECRET:change-me-to-a-long-random-secret}}")
+    @Value("${app.auth.token-secret}")
     private String tokenSecret;
 
-    @Value("${app.auth.token-expiration-seconds:${APP_AUTH_TOKEN_EXPIRATION_SECONDS:3600}}")
+    @Value("${app.auth.token-expiration-seconds}")
     private long expirationSeconds;
+
+    @PostConstruct
+    void validarSegredo() {
+        if (tokenSecret == null
+                || tokenSecret.getBytes(StandardCharsets.UTF_8).length < TAMANHO_MINIMO_SEGREDO
+                || tokenSecret.contains("change-me")) {
+            throw new IllegalStateException(
+                    "APP_AUTH_TOKEN_SECRET deve ser definido com pelo menos "
+                            + TAMANHO_MINIMO_SEGREDO + " caracteres aleatorios");
+        }
+    }
 
     public String gerarToken(Usuario usuario) {
         long expiresAt = Instant.now().plusSeconds(expirationSeconds).getEpochSecond();
-        String payload = usuario.getId() + ":" + usuario.getEmail() + ":" + expiresAt;
+        String payload = usuario.getId() + ":" + usuario.getTokenVersion() + ":" + expiresAt;
         String encodedPayload = encode(payload);
         return encodedPayload + "." + sign(encodedPayload);
     }
 
-    public UsuarioAutenticado validarToken(String token) {
+    public TokenValidado validarToken(String token) {
         String[] payloadParts = lerPayload(token);
         long expiresAt = Long.parseLong(payloadParts[2]);
         if (Instant.now().getEpochSecond() > expiresAt) {
             throw new IllegalArgumentException("Token expirado");
         }
 
-        return new UsuarioAutenticado(Long.parseLong(payloadParts[0]), payloadParts[1]);
+        return new TokenValidado(Long.parseLong(payloadParts[0]), Integer.parseInt(payloadParts[1]));
     }
 
     public long getExpirationSeconds() {
@@ -43,7 +61,7 @@ public class AuthTokenService {
 
     private String[] lerPayload(String token) {
         String[] parts = token.split("\\.");
-        if (parts.length != 2 || !sign(parts[0]).equals(parts[1])) {
+        if (parts.length != 2 || !assinaturaValida(parts[0], parts[1])) {
             throw new IllegalArgumentException("Token invalido");
         }
 
@@ -53,6 +71,13 @@ public class AuthTokenService {
             throw new IllegalArgumentException("Token invalido");
         }
         return payloadParts;
+    }
+
+    private boolean assinaturaValida(String payload, String assinatura) {
+        return MessageDigest.isEqual(
+                sign(payload).getBytes(StandardCharsets.UTF_8),
+                assinatura.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     private String encode(String value) {

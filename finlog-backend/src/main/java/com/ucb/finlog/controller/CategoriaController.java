@@ -1,9 +1,11 @@
 package com.ucb.finlog.controller;
 
 import com.ucb.finlog.dto.CategoriaDTO;
+import com.ucb.finlog.dto.CategoriaRequest;
 import com.ucb.finlog.dto.CategoriaResumoDTO;
 import com.ucb.finlog.security.UsuarioAutenticado;
 import com.ucb.finlog.service.CategoriaService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,17 +41,20 @@ public class CategoriaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoriaDTO criar(@RequestBody CategoriaDTO dto, @AuthenticationPrincipal UsuarioAutenticado usuario) {
-        return service.criar(dto, usuario.email());
+    public CategoriaDTO criar(
+            @Valid @RequestBody CategoriaRequest request,
+            @AuthenticationPrincipal UsuarioAutenticado usuario
+    ) {
+        return service.criar(request, usuario.email());
     }
 
     @PutMapping("/{id}")
     public CategoriaDTO atualizar(
             @PathVariable Long id,
-            @RequestBody CategoriaDTO dto,
+            @Valid @RequestBody CategoriaRequest request,
             @AuthenticationPrincipal UsuarioAutenticado usuario
     ) {
-        return service.atualizar(id, dto, usuario.email());
+        return service.atualizar(id, request, usuario.email());
     }
 
     @DeleteMapping("/{id}")

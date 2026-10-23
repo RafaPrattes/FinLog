@@ -8,7 +8,7 @@ Guia passo a passo para configurar e rodar o projeto do zero na sua máquina —
 |---|---|---|
 | **Git** | Baixar o código do repositório | https://git-scm.com/downloads |
 | **Docker Desktop** | Roda o backend e o banco de dados MySQL automaticamente, sem precisar instalar Java nem MySQL na sua máquina | https://www.docker.com/products/docker-desktop |
-| **Node.js** (versão 20 ou mais recente) | Roda o frontend (a tela do sistema) | https://nodejs.org |
+| **Node.js** (versão 22.12 ou mais recente) | Roda o frontend (a tela do sistema) | https://nodejs.org |
 
 Depois de instalar, confirme que deu certo abrindo um terminal (PowerShell, no Windows) e rodando:
 
@@ -41,7 +41,14 @@ cd finlog-backend
 copy .env.example .env
 ```
 
-Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com valores padrão que funcionam sem precisar mudar nada, **exceto a linha da chave da Gemini** (`GEMINI_API_KEY`), que você precisa preencher — veja o passo 4.
+Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com valores padrão que funcionam sem precisar mudar nada, **exceto duas linhas**:
+
+- `GEMINI_API_KEY`: a chave da IA, veja o passo 4.
+- `APP_AUTH_TOKEN_SECRET`: o segredo que assina os logins. O backend **não liga** sem ele. Precisa ter pelo menos 32 caracteres aleatórios e não pode conter `change-me`. Para gerar um, rode no PowerShell:
+  ```powershell
+  [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+  ```
+  e cole o resultado no lugar do valor de exemplo.
 
 Se quiser, pode revisar/ajustar os outros valores (útil só se alguma porta já estiver em uso na sua máquina):
 
@@ -128,8 +135,8 @@ Com os dois terminais rodando (Docker no primeiro, `npm run dev` no segundo):
 Você rodou `docker compose` fora da pasta `finlog-backend`. O arquivo `docker-compose.yml` fica dentro dela — sempre rode o comando de lá (`cd finlog-backend` primeiro).
 
 **Porta já em uso (erro ao subir o Docker)**
-Alguma outra coisa na sua máquina já está usando a porta 3306 (banco) ou 8080 (backend). Troque `MYSQL_PORT` ou `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `3307`, `8081`) e rode `docker compose up --build` de novo.
-> Se mudar `FINLOG_BACKEND_PORT`, também precisa atualizar a URL em `finlog-frontend/src/service/api.js` (o endereço que o frontend usa pra falar com o backend), já que esse endereço está fixo no código, não vem do `.env`.
+Alguma outra coisa na sua máquina já está usando a porta 8080 (backend). Troque `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `8081`) e rode `docker compose up --build` de novo. O banco MySQL não é publicado no seu computador por padrão (só o backend acessa); se quiser conectar um cliente SQL, descomente o bloco `ports` do `mysql-db` no `docker-compose.yml` e use `MYSQL_PORT`.
+> Se mudar `FINLOG_BACKEND_PORT`, avise o frontend: dentro de `finlog-frontend`, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL` (ex: `VITE_API_URL=http://localhost:8081/api`). Depois reinicie o `npm run dev`.
 
 **Assistente IA não responde**
 Confire se preencheu `GEMINI_API_KEY` no `.env` com uma chave válida (veja passo 4), e se o backend foi reiniciado depois de editar o `.env` (`docker compose down` + `docker compose up --build`).

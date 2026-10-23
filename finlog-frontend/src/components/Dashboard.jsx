@@ -1,140 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../service/api'
-
-/* ══════════════════════════════
-   UTILS
-══════════════════════════════ */
-function brl(n) {
-  return 'R$' + Math.abs(n).toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-function today() {
-  return new Date().toISOString().split('T')[0]
-}
-function fmtDate(d) {
-  if (!d) return ''
-  const [y, m, day] = d.split('-')
-  return `${day}/${m}/${y}`
-}
-
-/* ══════════════════════════════
-   DONUT CHART
-══════════════════════════════ */
-function DonutChart({ entTotal, saiTotal }) {
-  const total = entTotal + saiTotal
-  const r     = 40
-  const cx    = 54
-  const cy    = 54
-  const circ  = 2 * Math.PI * r
-
-  if (total === 0) {
-    return (
-      <svg width="108" height="108">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#DDD9D2" strokeWidth="15" />
-      </svg>
-    )
-  }
-
-  const entArc = (entTotal / total) * circ
-  const saiArc = (saiTotal / total) * circ
-  const offset = circ / 4
-
-  return (
-    <svg width="108" height="108">
-      <circle
-        cx={cx} cy={cy} r={r}
-        fill="none" stroke="#8FA98B" strokeWidth="15"
-        strokeDasharray={`${entArc} ${circ - entArc}`}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-      />
-      {saiTotal > 0 && (
-        <circle
-          cx={cx} cy={cy} r={r}
-          fill="none" stroke="#C4A882" strokeWidth="15"
-          strokeDasharray={`${saiArc} ${circ - saiArc}`}
-          strokeDashoffset={offset - entArc}
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  )
-}
-
-/* ══════════════════════════════
-   UTILS — Markdown
-══════════════════════════════ */
-function stripMarkdown(text) {
-  if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
-    .replace(/\*(.*?)\*/g, '$1')        // *itálico*
-    .replace(/#{1,6}\s*/g, '')          // ## títulos
-    .replace(/`(.*?)`/g, '$1')          // `código inline`
-    .replace(/^\s*[-*+]\s+/gm, '')      // listas com marcadores
-    .replace(/^\s*\d+\.\s+/gm, '')      // listas numeradas
-    .trim()
-}
-
-/* ══════════════════════════════
-   CHATBOT
-   Falta fazer ainda: integrar com backend (/api/chat)
-══════════════════════════════ */
-function ChatBot({ user }) {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: `Olá${user?.nome ? ', ' + user.nome.split(' ')[0] : ''}! Sou seu assistente financeiro. Como posso te ajudar hoje?` }
-  ])
-  const [input,   setInput]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const bottomRef = useRef(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function send() {
-    const text = input.trim()
-    if (!text || loading) return
-    setMessages(prev => [...prev, { role: 'user', text }])
-    setInput('')
-    setLoading(true)
-
-    try {
-      const { data } = await api.get('/ai/conselho')
-      setMessages(prev => [...prev, { role: 'assistant', text: data }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="chat-wrap">
-      <h2 className="page-title">Assistente IA</h2>
-      <div className="chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>{stripMarkdown(m.text)}</div>
-        ))}
-        {loading && <div className="chat-bubble assistant chat-typing">digitando…</div>}
-        <div ref={bottomRef} />
-      </div>
-      <div className="chat-input-row">
-        <input
-          className="chat-input"
-          type="text"
-          placeholder="Digite sua pergunta…"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-        />
-        <button className="chat-send" onClick={send} disabled={loading}>Enviar</button>
-      </div>
-    </div>
-  )
-}
+import { mensagemErro } from '../service/errors'
+import { brl, today, fmtDate, mapMeta, mapMovimentacao } from '../utils/format'
+import DonutChart from './DonutChart'
+import ChatBot from './ChatBot'
+import LancamentoModal from './LancamentoModal'
 
 /* ══════════════════════════════
    DASHBOARD
@@ -144,6 +14,8 @@ function Dashboard({ user, onLogout }) {
   const [metas,      setMetas]      = useState([])
   const [editModeOn, setEditModeOn] = useState(false)
   const [loading,    setLoading]    = useState(true)
+  const [loadError,  setLoadError]  = useState(false)
+  const [reloadKey,  setReloadKey]  = useState(0)
   const [activeTab,  setActiveTab]  = useState('home')
 
   const [filterType, setFilterType] = useState('all')
@@ -169,40 +41,51 @@ function Dashboard({ user, onLogout }) {
   const [toastVisible, setToastVisible] = useState(false)
   const toastTimer = useRef(null)
 
-  /* ══ Carregar movimentações e categorias do usuário logado ══ */
+  /* ══ Carregar movimentações, categorias e metas do usuário logado ══ */
   useEffect(() => {
     async function fetchCategorias() {
       try {
         const { data } = await api.get('/categorias')
         setCategorias(data)
+        return true
       } catch (err) {
         console.error('Erro ao carregar categorias:', err)
+        return false
       }
     }
     async function fetchMovimentacoes() {
       try {
-        const { data } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
-        const mapped = data.map(m => ({
-          id:    m.id,
-          type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-          desc:  m.descricao,
-          val:   parseFloat(m.valor) || 0,
-          date:  m.data,
-          cat:   m.categoria?.nome || 'Outros',
-          catId: m.categoria?.id ?? null,
-        }))
-        setTxns(mapped)
+        const { data } = await api.get('/movimentacoes')
+        setTxns(data.map(mapMovimentacao))
+        return true
       } catch (err) {
         console.error('Erro ao carregar movimentações:', err)
-      } finally {
-        setLoading(false)
+        return false
       }
     }
-    if (user?.id) {
-      fetchCategorias()
-      fetchMovimentacoes()
+    async function fetchMetas() {
+      try {
+        const { data } = await api.get('/metas')
+        setMetas(data.map(mapMeta))
+        return true
+      } catch (err) {
+        console.error('Erro ao carregar metas:', err)
+        return false
+      }
     }
-  }, [user])
+    async function fetchTudo() {
+      const resultados = await Promise.all([fetchCategorias(), fetchMovimentacoes(), fetchMetas()])
+      setLoadError(resultados.includes(false))
+      setLoading(false)
+    }
+    if (user?.id) fetchTudo()
+  }, [user, reloadKey])
+
+  function recarregar() {
+    setLoading(true)
+    setLoadError(false)
+    setReloadKey(k => k + 1)
+  }
 
   /* ══ Valores calculados ══ */
   const entTotal = txns.filter(t => t.type === 'entrada').reduce((s, t) => s + t.val, 0)
@@ -262,30 +145,21 @@ function Dashboard({ user, onLogout }) {
         valor:     val,
         data:      date,
         tipo:      lancType === 'entrada' ? 'RECEITA' : 'DESPESA',
-        usuario:   { id: user.id },
         ...categoriaPayload,
       }
       await api.post('/movimentacoes', payload)
       setLancModal(false)
       showToast(lancType === 'entrada' ? 'Receita registrada!' : 'Despesa registrada!')
       // Recarrega lista do backend para garantir IDs corretos (necessário para deletar)
-      const { data: updated } = await api.get(`/movimentacoes?usuarioId=${user.id}`)
-      setTxns(updated.map(m => ({
-        id:    m.id,
-        type:  m.tipo === 'RECEITA' ? 'entrada' : 'saida',
-        desc:  m.descricao,
-        val:   parseFloat(m.valor) || 0,
-        date:  m.data,
-        cat:   m.categoria?.nome || 'Outros',
-        catId: m.categoria?.id ?? null,
-      })))
+      const { data: updated } = await api.get('/movimentacoes')
+      setTxns(updated.map(mapMovimentacao))
       if (lancForm.catId === '__nova__') {
         const { data: cats } = await api.get('/categorias')
         setCategorias(cats)
       }
     } catch (err) {
       console.error('Erro ao salvar lançamento:', err)
-      showToast('Erro ao salvar. Tente novamente.')
+      showToast(mensagemErro(err, 'Erro ao salvar. Tente novamente.'))
     } finally {
       setSalvando(false)
     }
@@ -323,7 +197,6 @@ function Dashboard({ user, onLogout }) {
         valor:     val,
         data:      date,
         tipo:      editLancModal.type === 'entrada' ? 'RECEITA' : 'DESPESA',
-        usuario:   { id: user.id },
         ...categoriaPayload,
       }
       const { data: updated } = await api.put(`/movimentacoes/${editLancModal.id}`, payload)
@@ -345,7 +218,7 @@ function Dashboard({ user, onLogout }) {
       }
     } catch (err) {
       console.error('Erro ao editar lançamento:', err)
-      showToast('Erro ao editar. Tente novamente.')
+      showToast(mensagemErro(err, 'Erro ao editar. Tente novamente.'))
     } finally {
       setSalvando(false)
     }
@@ -361,13 +234,13 @@ function Dashboard({ user, onLogout }) {
           showToast('Lançamento excluído.')
         } catch (err) {
           console.error('Erro ao excluir lançamento:', err)
-          showToast('Erro ao excluir. Tente novamente.')
+          showToast(mensagemErro(err, 'Erro ao excluir. Tente novamente.'))
         }
       },
     })
   }
 
-  /* ══ Metas (em memória) ══ */
+  /* ══ Metas ══ */
   function openMetaModal(id) {
     setEditingMetaId(id)
     if (id) {
@@ -379,28 +252,46 @@ function Dashboard({ user, onLogout }) {
     setMetaModal(true)
   }
 
-  function saveMeta() {
+  async function saveMeta() {
     const desc = metaForm.desc.trim()
     const val  = parseFloat(metaForm.val)
     if (!desc)                  { showToast('Informe a descrição.');     return }
     if (isNaN(val) || val <= 0) { showToast('Informe um valor válido.'); return }
+    if (salvando) return
 
-    if (editingMetaId) {
-      setMetas(prev => prev.map(m => m.id === editingMetaId ? { ...m, desc, val } : m))
-      showToast('Meta atualizada!')
-    } else {
-      setMetas(prev => [...prev, { id: Date.now(), desc, val }])
-      showToast('Meta adicionada!')
+    setSalvando(true)
+    try {
+      const payload = { descricao: desc, valor: val }
+      if (editingMetaId) {
+        const { data } = await api.put(`/metas/${editingMetaId}`, payload)
+        setMetas(prev => prev.map(m => m.id === editingMetaId ? mapMeta(data) : m))
+        showToast('Meta atualizada!')
+      } else {
+        const { data } = await api.post('/metas', payload)
+        setMetas(prev => [...prev, mapMeta(data)])
+        showToast('Meta adicionada!')
+      }
+      setMetaModal(false)
+    } catch (err) {
+      console.error('Erro ao salvar meta:', err)
+      showToast(mensagemErro(err, 'Erro ao salvar meta. Tente novamente.'))
+    } finally {
+      setSalvando(false)
     }
-    setMetaModal(false)
   }
 
   function delMeta(id) {
     setConfirmModal({
       msg: 'Deseja excluir esta meta permanentemente?',
-      cb: () => {
-        setMetas(prev => prev.filter(m => m.id !== id))
-        showToast('Meta excluída.')
+      cb: async () => {
+        try {
+          await api.delete(`/metas/${id}`)
+          setMetas(prev => prev.filter(m => m.id !== id))
+          showToast('Meta excluída.')
+        } catch (err) {
+          console.error('Erro ao excluir meta:', err)
+          showToast(mensagemErro(err, 'Erro ao excluir meta. Tente novamente.'))
+        }
       },
     })
   }
@@ -408,7 +299,9 @@ function Dashboard({ user, onLogout }) {
   /* ══ Logout ══ */
   function confirmLogout() {
     setConfirmModal({
-      msg: 'Deseja encerrar a sessão?',
+      title:        'Encerrar sessão',
+      confirmLabel: 'Sair',
+      msg:          'Deseja encerrar a sessão?',
       cb: () => {
         showToast('Sessão encerrada.')
         setTimeout(() => onLogout(), 400)
@@ -453,13 +346,13 @@ function Dashboard({ user, onLogout }) {
             🤖 Assistente IA
           </button>
         </nav>
-        <div className="sidebar-user" onClick={confirmLogout} title="Sair">
-          <div className="avatar">{avatarText}</div>
+        <button type="button" className="sidebar-user" onClick={confirmLogout} title="Sair">
+          <div className="avatar" aria-hidden="true">{avatarText}</div>
           <div>
             <div className="user-name">{user?.nome || 'Usuário'}</div>
             <div className="logout-label">Clique para sair</div>
           </div>
-        </div>
+        </button>
       </aside>
 
       {/* ─── MAIN ─── */}
@@ -511,7 +404,7 @@ function Dashboard({ user, onLogout }) {
               <div className="card">
                 <div className="card-head">
                   <div className="card-head-title">Suas Metas</div>
-                  <button className="icon-btn" onClick={() => openMetaModal(null)}>+</button>
+                  <button className="icon-btn" onClick={() => openMetaModal(null)} aria-label="Adicionar meta">+</button>
                 </div>
                 <div className="metas-scroll">
                   {metas.length === 0 ? (
@@ -522,8 +415,8 @@ function Dashboard({ user, onLogout }) {
                         <div className="meta-d">{m.desc}</div>
                         <div className="meta-v">{brl(m.val)}</div>
                         <div className="meta-act">
-                          <button className="edit-m" onClick={() => openMetaModal(m.id)}>✏</button>
-                          <button className="del-m"  onClick={() => delMeta(m.id)}>🗑</button>
+                          <button className="edit-m" onClick={() => openMetaModal(m.id)} aria-label={`Editar meta ${m.desc}`}>✏</button>
+                          <button className="del-m"  onClick={() => delMeta(m.id)} aria-label={`Excluir meta ${m.desc}`}>🗑</button>
                         </div>
                       </div>
                     ))
@@ -542,17 +435,17 @@ function Dashboard({ user, onLogout }) {
                     >
                       {editModeOn ? '✓ Concluir' : '✏ Editar'}
                     </button>
-                    <button className="icon-btn" onClick={() => openLanc('entrada')}>+</button>
+                    <button className="icon-btn" onClick={() => openLanc('entrada')} aria-label="Novo lançamento">+</button>
                   </div>
                 </div>
 
                 <div className="filter-bar">
-                  <select className="fsel" value={filterType} onChange={e => setFilterType(e.target.value)}>
+                  <select className="fsel" aria-label="Filtrar por tipo" value={filterType} onChange={e => setFilterType(e.target.value)}>
                     <option value="all">Todos</option>
                     <option value="entrada">Entradas</option>
                     <option value="saida">Saídas</option>
                   </select>
-                  <select className="fsel" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+                  <select className="fsel" aria-label="Filtrar por categoria" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
                     <option value="all">Todas categorias</option>
                     {cats.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -561,6 +454,13 @@ function Dashboard({ user, onLogout }) {
                 <div className="extrato-scroll">
                   {loading ? (
                     <div className="empty-msg">Carregando…</div>
+                  ) : loadError ? (
+                    <div className="empty-msg" role="alert">
+                      Não foi possível carregar seus dados.
+                      <div>
+                        <button className="link-btn" onClick={recarregar}>Tentar novamente</button>
+                      </div>
+                    </div>
                   ) : filteredTxns.length === 0 ? (
                     <div className="empty-msg">Nenhuma movimentação encontrada.</div>
                   ) : (
@@ -579,8 +479,8 @@ function Dashboard({ user, onLogout }) {
                           </div>
                           {editModeOn && (
                             <div className="txn-actions show">
-                              <button className="ea" onClick={() => openEditLanc(t)}>✏</button>
-                              <button className="da" onClick={() => delLanc(t.id)}>🗑</button>
+                              <button className="ea" onClick={() => openEditLanc(t)} aria-label={`Editar lançamento ${t.desc}`}>✏</button>
+                              <button className="da" onClick={() => delLanc(t.id)} aria-label={`Excluir lançamento ${t.desc}`}>🗑</button>
                             </div>
                           )}
                         </div>
@@ -598,97 +498,53 @@ function Dashboard({ user, onLogout }) {
 
       {/* ═══ MODAL: NOVO LANÇAMENTO ═══ */}
       {lancModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setLancModal(false) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setLancModal(false)}>✕</button>
-            <div className="m-title">Novo lançamento</div>
-            <div className="m-type-row">
-              <button className={`m-type-btn${lancType === 'entrada' ? ' e' : ''}`} onClick={() => setLancType('entrada')}>Entrada +</button>
-              <button className={`m-type-btn${lancType === 'saida'   ? ' s' : ''}`} onClick={() => setLancType('saida')}>Saída –</button>
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" placeholder="Digite a descrição" value={lancForm.desc} onChange={e => setLancForm(f => ({ ...f, desc: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" placeholder="Digite o valor" min="0.01" step="0.01" value={lancForm.val} onChange={e => setLancForm(f => ({ ...f, val: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Data:</span>
-              <input className="m-inp" type="date" value={lancForm.date} onChange={e => setLancForm(f => ({ ...f, date: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Categoria:</span>
-              <select className="m-inp" value={lancForm.catId} onChange={e => setLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
-                <option value="">Selecione uma categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                <option value="__nova__">+ Nova categoria…</option>
-              </select>
-            </div>
-            {lancForm.catId === '__nova__' && (
-              <div className="m-row">
-                <span className="m-lbl">Nova categoria:</span>
-                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={lancForm.catNomeNovo} onChange={e => setLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
-              </div>
-            )}
-            <button className="m-btn" onClick={saveLanc} disabled={salvando}>Confirmar</button>
-          </div>
-        </div>
+        <LancamentoModal
+          idPrefix="lanc"
+          title="Novo lançamento"
+          form={lancForm}
+          setForm={setLancForm}
+          categorias={categorias}
+          tipo={lancType}
+          onTipoChange={setLancType}
+          descPlaceholder="Digite a descrição"
+          valPlaceholder="Digite o valor"
+          submitLabel="Confirmar"
+          onSubmit={saveLanc}
+          salvando={salvando}
+          onClose={() => setLancModal(false)}
+        />
       )}
 
       {/* ═══ MODAL: EDITAR LANÇAMENTO ═══ */}
       {editLancModal && (
-        <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setEditLancModal(null) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setEditLancModal(null)}>✕</button>
-            <div className="m-title">Editar lançamento</div>
-            <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" value={editLancForm.desc} onChange={e => setEditLancForm(f => ({ ...f, desc: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" min="0.01" step="0.01" value={editLancForm.val} onChange={e => setEditLancForm(f => ({ ...f, val: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Data:</span>
-              <input className="m-inp" type="date" value={editLancForm.date} onChange={e => setEditLancForm(f => ({ ...f, date: e.target.value }))} />
-            </div>
-            <div className="m-row">
-              <span className="m-lbl">Categoria:</span>
-              <select className="m-inp" value={editLancForm.catId} onChange={e => setEditLancForm(f => ({ ...f, catId: e.target.value, catNomeNovo: '' }))}>
-                <option value="">Selecione uma categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                <option value="__nova__">+ Nova categoria…</option>
-              </select>
-            </div>
-            {editLancForm.catId === '__nova__' && (
-              <div className="m-row">
-                <span className="m-lbl">Nova categoria:</span>
-                <input className="m-inp" type="text" placeholder="Ex: Salário, Alimentação…" value={editLancForm.catNomeNovo} onChange={e => setEditLancForm(f => ({ ...f, catNomeNovo: e.target.value }))} />
-              </div>
-            )}
-            <button className="m-btn" onClick={saveEditLanc} disabled={salvando}>Salvar alterações</button>
-          </div>
-        </div>
+        <LancamentoModal
+          idPrefix="edit-lanc"
+          title="Editar lançamento"
+          form={editLancForm}
+          setForm={setEditLancForm}
+          categorias={categorias}
+          submitLabel="Salvar alterações"
+          onSubmit={saveEditLanc}
+          salvando={salvando}
+          onClose={() => setEditLancModal(null)}
+        />
       )}
 
       {/* ═══ MODAL: META ═══ */}
       {metaModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setMetaModal(false) }}>
-          <div className="modal">
-            <button className="m-close" onClick={() => setMetaModal(false)}>✕</button>
-            <div className="m-title">{editingMetaId ? 'Editar Meta' : 'Nova Meta'}</div>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="meta-modal-title">
+            <button className="m-close" onClick={() => setMetaModal(false)} aria-label="Fechar">✕</button>
+            <div className="m-title" id="meta-modal-title">{editingMetaId ? 'Editar Meta' : 'Nova Meta'}</div>
             <div className="m-row">
-              <span className="m-lbl">Descrição:</span>
-              <input className="m-inp" type="text" placeholder="Ex: Casa própria…" value={metaForm.desc} onChange={e => setMetaForm(f => ({ ...f, desc: e.target.value }))} />
+              <label className="m-lbl" htmlFor="meta-desc">Descrição:</label>
+              <input id="meta-desc" className="m-inp" type="text" maxLength={255} placeholder="Ex: Casa própria…" value={metaForm.desc} onChange={e => setMetaForm(f => ({ ...f, desc: e.target.value }))} />
             </div>
             <div className="m-row">
-              <span className="m-lbl">Valor:</span>
-              <input className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
+              <label className="m-lbl" htmlFor="meta-val">Valor:</label>
+              <input id="meta-val" className="m-inp" type="number" placeholder="Ex: 1000" min="0.01" step="0.01" value={metaForm.val} onChange={e => setMetaForm(f => ({ ...f, val: e.target.value }))} />
             </div>
-            <button className="m-btn" onClick={saveMeta}>Confirmar</button>
+            <button className="m-btn" onClick={saveMeta} disabled={salvando}>Confirmar</button>
           </div>
         </div>
       )}
@@ -696,19 +552,19 @@ function Dashboard({ user, onLogout }) {
       {/* ═══ MODAL: CONFIRMAÇÃO ═══ */}
       {confirmModal && (
         <div className="overlay on" onClick={e => { if (e.target.classList.contains('overlay')) setConfirmModal(null) }}>
-          <div className="modal narrow">
-            <div className="m-title" style={{ fontSize: '19px' }}>Confirmar exclusão</div>
-            <p className="conf-msg">{confirmModal.msg}</p>
+          <div className="modal narrow" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-msg">
+            <div className="m-title" id="confirm-modal-title" style={{ fontSize: '19px' }}>{confirmModal.title || 'Confirmar exclusão'}</div>
+            <p className="conf-msg" id="confirm-modal-msg">{confirmModal.msg}</p>
             <div className="conf-btns">
               <button className="btn-cancel" onClick={() => setConfirmModal(null)}>Cancelar</button>
-              <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>Excluir</button>
+              <button className="btn-del" onClick={() => { confirmModal.cb(); setConfirmModal(null) }}>{confirmModal.confirmLabel || 'Excluir'}</button>
             </div>
           </div>
         </div>
       )}
 
       {/* ═══ TOAST ═══ */}
-      <div className={`toast${toastVisible ? ' show' : ''}`}>{toastMsg}</div>
+      <div className={`toast${toastVisible ? ' show' : ''}`} role="status" aria-live="polite">{toastMsg}</div>
 
     </div>
   )

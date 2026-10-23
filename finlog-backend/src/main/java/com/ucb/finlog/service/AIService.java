@@ -27,6 +27,7 @@ public class AIService {
 
     private static final Logger log = LoggerFactory.getLogger(AIService.class);
     private static final Locale PT_BR = Locale.of("pt", "BR");
+    private static final String ERRO_CONEXAO = "Erro ao conectar com a IA. Tente novamente.";
 
     @Value("${gemini.api.key}")
     private String apiKey;
@@ -49,6 +50,38 @@ public class AIService {
             return "Comece a registrar suas transacoes para receber recomendacoes personalizadas!";
         }
 
+        ResumoFinanceiro resumo = resumir(dados);
+        String prompt = "Voce e um mentor financeiro do app FinLog. " +
+                "Analise este resumo: " + resumo.texto() + ". " +
+                "Ultimas transacoes: " + resumo.ultimasTransacoes() + ". " +
+                "De um conselho pratico e motivador de no maximo 40 palavras, focando em reduzir gastos em " +
+                resumo.categoriaComMaiorGasto() + " ou aproveitar melhor as receitas.";
+
+        String texto = chamarGemini(prompt);
+        return texto != null ? texto : "Continue acompanhando seus gastos para um futuro melhor!";
+    }
+
+    public String responderPergunta(String emailUsuario, String pergunta) {
+        List<Movimentacao> dados = repository.findByUsuarioEmail(emailUsuario);
+
+        String contexto = "O usuario ainda nao registrou transacoes.";
+        if (!dados.isEmpty()) {
+            ResumoFinanceiro resumo = resumir(dados);
+            contexto = "Resumo: " + resumo.texto() + ". Ultimas transacoes: " + resumo.ultimasTransacoes() + ".";
+        }
+
+        String prompt = "Voce e o assistente financeiro do app FinLog. " +
+                "Dados do usuario: " + contexto + " " +
+                "Pergunta do usuario: \"" + pergunta.trim() + "\". " +
+                "Responda em portugues, de forma pratica e objetiva, em no maximo 80 palavras, " +
+                "usando os dados do usuario quando forem relevantes. " +
+                "Se a pergunta nao for sobre financas pessoais, explique gentilmente que so pode ajudar com financas.";
+
+        String texto = chamarGemini(prompt);
+        return texto != null ? texto : "Nao consegui gerar uma resposta agora. Tente reformular a pergunta.";
+    }
+
+    private ResumoFinanceiro resumir(List<Movimentacao> dados) {
         BigDecimal totalReceitas = dados.stream()
                 .filter(m -> m.getTipo() == TipoMovimentacao.RECEITA)
                 .map(Movimentacao::getValor)
@@ -77,7 +110,7 @@ public class AIService {
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
 
-        String resumoFinanceiro = String.format(
+        String texto = String.format(
                 PT_BR,
                 "Receitas: R$%.2f | Despesas: R$%.2f | Saldo: R$%.2f | Maior gasto em %s: R$%.2f",
                 totalReceitas,
@@ -87,7 +120,7 @@ public class AIService {
                 maiorGasto
         );
 
-        String listaUltimasTransacoes = dados.stream()
+        String ultimasTransacoes = dados.stream()
                 .sorted(Comparator.comparing(Movimentacao::getData,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(5)
@@ -100,12 +133,10 @@ public class AIService {
                 ))
                 .collect(Collectors.joining(" | "));
 
-        String prompt = "Voce e um mentor financeiro do app FinLog. " +
-                "Analise este resumo: " + resumoFinanceiro + ". " +
-                "Ultimas transacoes: " + listaUltimasTransacoes + ". " +
-                "De um conselho pratico e motivador de no maximo 40 palavras, focando em reduzir gastos em " +
-                categoriaComMaiorGasto + " ou aproveitar melhor as receitas.";
+        return new ResumoFinanceiro(texto, categoriaComMaiorGasto, ultimasTransacoes);
+    }
 
+    private String chamarGemini(String prompt) {
         var request = new GeminiRequest(List.of(
                 new GeminiRequest.Content(List.of(
                         new GeminiRequest.Part(prompt)
@@ -123,16 +154,31 @@ public class AIService {
             response = restTemplate.postForObject(apiUrl, entity, GeminiResponse.class);
         } catch (HttpStatusCodeException e) {
             log.error("ERRO GEMINI - status={} corpo={}", e.getStatusCode(), e.getResponseBodyAsString());
-            return "Erro ao conectar com a IA. Tente novamente.";
+            return ERRO_CONEXAO;
         } catch (RuntimeException e) {
             log.error("ERRO GEMINI - falha inesperada ao chamar a API", e);
-            return "Erro ao conectar com a IA. Tente novamente.";
+            return ERRO_CONEXAO;
         }
 
-        if (response != null && !response.candidates().isEmpty()) {
-            return response.candidates().getFirst().content().parts().getFirst().text();
-        }
+        return extrairTexto(response);
+    }
 
-        return "Continue acompanhando seus gastos para um futuro melhor!";
+    private String extrairTexto(GeminiResponse response) {
+        if (response == null || response.candidates() == null || response.candidates().isEmpty()) {
+            return null;
+        }
+        GeminiResponse.Candidate candidato = response.candidates().getFirst();
+        if (candidato == null || candidato.content() == null
+                || candidato.content().parts() == null || candidato.content().parts().isEmpty()) {
+            return null;
+        }
+        GeminiResponse.Part parte = candidato.content().parts().getFirst();
+        if (parte == null || parte.text() == null || parte.text().isBlank()) {
+            return null;
+        }
+        return parte.text();
+    }
+
+    private record ResumoFinanceiro(String texto, String categoriaComMaiorGasto, String ultimasTransacoes) {
     }
 }
