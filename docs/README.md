@@ -27,7 +27,7 @@ Documentos da entrega final:
 | [DADOS.md](DADOS.md) | Documentação do modelo de dados (versão editável) |
 | [modelo-de-dados.mmd](modelo-de-dados.mmd) | Diagrama do modelo de dados (Mermaid, editável) |
 | [fontes/](fontes/) | Scripts que geram os PDFs e diagramas acima |
-| [telas/](telas/) | Prints das telas reais do sistema em funcionamento (a adicionar) |
+| [telas/](telas/) | Prints das telas reais do sistema em funcionamento (login, cadastro, Página Inicial, novo lançamento, extrato, metas, IA Conselheira e configurações) |
 
 Propostas do semestre anterior (março–abril de 2026):
 
