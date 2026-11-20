@@ -4,6 +4,7 @@ import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.LoginRequest;
 import com.ucb.finlog.dto.UsuarioResponse;
 import com.ucb.finlog.model.Usuario;
+import com.ucb.finlog.repository.ChatMensagemRepository;
 import com.ucb.finlog.repository.UsuarioRepository;
 import com.ucb.finlog.security.AuthTokenService;
 import com.ucb.finlog.security.LoginAttemptService;
@@ -28,17 +29,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthTokenService authTokenService;
     private final LoginAttemptService loginAttemptService;
+    private final ChatMensagemRepository chatMensagemRepository;
 
     public AuthService(
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder,
             AuthTokenService authTokenService,
-            LoginAttemptService loginAttemptService
+            LoginAttemptService loginAttemptService,
+            ChatMensagemRepository chatMensagemRepository
     ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.authTokenService = authTokenService;
         this.loginAttemptService = loginAttemptService;
+        this.chatMensagemRepository = chatMensagemRepository;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -59,13 +63,17 @@ public class AuthService {
         }
 
         loginAttemptService.registrarSucesso(email);
+        // A conversa com a IA vale por sessao: cada login comeca uma conversa nova
+        chatMensagemRepository.deleteByUsuarioId(usuario.get().getId());
         return criarResposta(usuario.get());
     }
 
     /**
-     * Incrementa a versao de token do usuario, invalidando todos os tokens emitidos ate agora.
+     * Incrementa a versao de token do usuario, invalidando todos os tokens emitidos ate agora,
+     * e apaga a conversa com a IA da sessao que terminou.
      */
     public void logout(Long usuarioId) {
+        chatMensagemRepository.deleteByUsuarioId(usuarioId);
         usuarioRepository.findById(usuarioId).ifPresent(usuario -> {
             usuario.setTokenVersion(usuario.getTokenVersion() + 1);
             usuarioRepository.save(usuario);

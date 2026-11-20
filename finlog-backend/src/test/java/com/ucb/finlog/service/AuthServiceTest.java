@@ -3,6 +3,7 @@ package com.ucb.finlog.service;
 import com.ucb.finlog.dto.AuthResponse;
 import com.ucb.finlog.dto.LoginRequest;
 import com.ucb.finlog.model.Usuario;
+import com.ucb.finlog.repository.ChatMensagemRepository;
 import com.ucb.finlog.repository.UsuarioRepository;
 import com.ucb.finlog.security.AuthTokenService;
 import com.ucb.finlog.security.LoginAttemptService;
@@ -42,6 +43,9 @@ class AuthServiceTest {
     @Mock
     private LoginAttemptService loginAttemptService;
 
+    @Mock
+    private ChatMensagemRepository chatMensagemRepository;
+
     @InjectMocks
     private AuthService service;
 
@@ -67,6 +71,7 @@ class AuthServiceTest {
         verify(loginAttemptService).verificarBloqueio("maria@email.com");
         verify(loginAttemptService).registrarSucesso("maria@email.com");
         verify(loginAttemptService, never()).registrarFalha(anyString());
+        verify(chatMensagemRepository).deleteByUsuarioId(1L);
     }
 
     @Test
@@ -91,6 +96,7 @@ class AuthServiceTest {
         assertEquals("Credenciais inválidas", exception.getReason());
         verify(passwordEncoder).matches("123456", AuthService.HASH_FICTICIO);
         verify(loginAttemptService).registrarFalha("maria@email.com");
+        verify(chatMensagemRepository, never()).deleteByUsuarioId(org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
@@ -151,6 +157,7 @@ class AuthServiceTest {
 
         assertEquals(4, usuario.getTokenVersion());
         verify(usuarioRepository).save(usuario);
+        verify(chatMensagemRepository).deleteByUsuarioId(1L);
     }
 
     @Test

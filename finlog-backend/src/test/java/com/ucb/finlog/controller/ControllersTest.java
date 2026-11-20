@@ -6,6 +6,7 @@ import com.ucb.finlog.dto.CadastroUsuarioRequest;
 import com.ucb.finlog.dto.CategoriaDTO;
 import com.ucb.finlog.dto.CategoriaRequest;
 import com.ucb.finlog.dto.CategoriaResumoDTO;
+import com.ucb.finlog.dto.ChatMensagemResponse;
 import com.ucb.finlog.dto.ChatRequest;
 import com.ucb.finlog.dto.ChatResponse;
 import com.ucb.finlog.dto.LoginRequest;
@@ -28,6 +29,7 @@ import com.ucb.finlog.service.UsuarioService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -199,6 +201,18 @@ class ControllersTest {
                 .conversar(new ChatRequest("Quanto gastei?"), new UsuarioAutenticado(1L, "maria@email.com"));
 
         assertEquals("Voce gastou R$100,00.", response.resposta());
+    }
+
+    @Test
+    void aiControllerDeveRetornarHistoricoDoChat() {
+        AIService service = mock(AIService.class);
+        List<ChatMensagemResponse> historico = List.of(
+                new ChatMensagemResponse("USUARIO", "Oi", Instant.parse("2026-10-22T10:00:00Z")),
+                new ChatMensagemResponse("IA", "Ola!", Instant.parse("2026-10-22T10:00:02Z"))
+        );
+        when(service.historico("maria@email.com")).thenReturn(historico);
+
+        assertEquals(historico, new AIController(service).historico(new UsuarioAutenticado(1L, "maria@email.com")));
     }
 
     private Usuario usuario(Long id, String nome, String email) {

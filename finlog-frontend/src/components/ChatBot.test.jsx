@@ -5,12 +5,38 @@ import api from '../service/api'
 import ChatBot from './ChatBot'
 
 vi.mock('../service/api', () => ({
-  default: { post: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
 describe('ChatBot', () => {
   beforeEach(() => {
     vi.mocked(api.post).mockReset()
+    vi.mocked(api.get).mockReset()
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+  })
+
+  it('recupera a conversa da sessão ao abrir o chat', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: [
+        { papel: 'USUARIO', texto: 'Onde gasto mais?', criadaEm: '2026-10-22T13:00:00Z' },
+        { papel: 'IA', texto: 'Em **Moradia**.', criadaEm: '2026-10-22T13:00:03Z' },
+      ],
+    })
+    render(<ChatBot user={{ nome: 'Ana' }} />)
+
+    expect(api.get).toHaveBeenCalledWith('/ai/chat')
+    expect(await screen.findByText('Onde gasto mais?')).toBeInTheDocument()
+    expect(screen.getByText('Em Moradia.')).toBeInTheDocument()
+    const textos = screen.getAllByText(/./, { selector: '.msg-text' }).map(e => e.textContent)
+    expect(textos).toEqual(['Olá, Ana! Sou sua conselheira financeira. Como posso te ajudar hoje?', 'Onde gasto mais?', 'Em Moradia.'])
+  })
+
+  it('segue só com a saudação quando não consegue buscar o histórico', async () => {
+    vi.mocked(api.get).mockRejectedValue(new Error('falhou'))
+    render(<ChatBot user={{ nome: 'Ana' }} />)
+
+    expect(await screen.findByText(/Olá, Ana!/)).toBeInTheDocument()
+    expect(screen.getAllByText(/./, { selector: '.msg-text' })).toHaveLength(1)
   })
 
   it('cumprimenta pelo primeiro nome', () => {
