@@ -485,7 +485,9 @@ ul { list-style: none; }
   display: flex; flex-direction: column; gap: 1.5rem;
   border-color: var(--border-soft);
 }
+/* position: relative prende os .sr-only (absolutos) das mensagens dentro da rolagem; sem ele, com a conversa longa, a página inteira estica e rola */
 .chat-messages {
+  position: relative;
   flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: 1.25rem; padding-right: .5rem;
 }
