@@ -13,7 +13,7 @@
 
 ## Vídeo de apresentação
 
-Link (YouTube, não listado): VIDEO_LINK_AQUI
+Link (YouTube, não listado): https://youtu.be/adDrjDdMtcM
 
 ## Documentos
 
