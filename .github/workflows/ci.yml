@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: finlog-backend
+        working-directory: api
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: finlog-frontend
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: finlog-frontend/package-lock.json
+          cache-dependency-path: web/package-lock.json
 
       - run: npm ci
       - run: npm run lint
