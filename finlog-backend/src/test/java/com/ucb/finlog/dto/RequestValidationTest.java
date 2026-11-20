@@ -156,6 +156,62 @@ class RequestValidationTest {
         assertTrue(validator.validate(new CategoriaRequest("Mercado", "Compras")).isEmpty());
     }
 
+
+    @Test
+    void movimentacaoDeveRejeitarValorZero() {
+        MovimentacaoRequest request = new MovimentacaoRequest(
+                "Mercado",
+                BigDecimal.ZERO,
+                LocalDate.of(2026, 5, 27),
+                TipoMovimentacao.DESPESA,
+                null,
+                null
+        );
+
+        assertEquals(
+                Set.of("Valor deve ser positivo"),
+                mensagens(validator.validate(request))
+        );
+    }
+
+    @Test
+    void movimentacaoDeveRejeitarValorNegativo() {
+        MovimentacaoRequest request = new MovimentacaoRequest(
+                "Mercado",
+                new BigDecimal("-10.00"),
+                LocalDate.of(2026, 5, 27),
+                TipoMovimentacao.DESPESA,
+                null,
+                null
+        );
+
+        assertEquals(
+                Set.of("Valor deve ser positivo"),
+                mensagens(validator.validate(request))
+        );
+    }
+
+    @Test
+    void movimentacaoDeveExigirCamposObrigatorios() {
+        MovimentacaoRequest request = new MovimentacaoRequest(
+                "Mercado",
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        assertEquals(
+                Set.of(
+                        "Valor e obrigatorio",
+                        "Data e obrigatoria",
+                        "Tipo e obrigatorio"
+                ),
+                mensagens(validator.validate(request))
+        );
+    }
+
     private static <T> Set<String> mensagens(Set<ConstraintViolation<T>> violacoes) {
         return violacoes.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
     }
