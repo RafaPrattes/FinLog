@@ -1,0 +1,50 @@
+%% FinLog - modelo de dados (diagrama entidade-relacionamento)
+%% Fonte: entidades JPA em api/src/main/java/com/ucb/finlog/model/
+%% Esquema criado pelo Hibernate (spring.jpa.hibernate.ddl-auto=update) no MySQL.
+%% Para ver o desenho: cole em https://mermaid.live ou abra no VS Code com uma extensao de Mermaid.
+erDiagram
+    usuarios ||--o{ categorias : "cria"
+    usuarios ||--o{ movimentacoes : "registra"
+    usuarios ||--o{ metas : "define"
+    usuarios ||--o{ chat_mensagens : "conversa"
+    categorias |o--o{ movimentacoes : "classifica"
+
+    usuarios {
+        bigint id PK "AUTO_INCREMENT"
+        varchar_255 nome "NOT NULL"
+        varchar_255 email UK "NOT NULL, unico"
+        varchar_255 senha "NOT NULL, hash BCrypt"
+        int token_version "NOT NULL, DEFAULT 0"
+    }
+
+    categorias {
+        bigint id PK "AUTO_INCREMENT"
+        varchar_100 nome UK "NOT NULL, unico por usuario"
+        varchar_255 descricao "NULL"
+        bigint usuario_id FK, UK "NOT NULL -> usuarios.id"
+    }
+
+    movimentacoes {
+        bigint id PK "AUTO_INCREMENT"
+        varchar_255 descricao "NULL"
+        decimal_15_2 valor "NOT NULL"
+        date data "NOT NULL"
+        enum tipo "NOT NULL: RECEITA | DESPESA"
+        bigint usuario_id FK "NOT NULL -> usuarios.id"
+        bigint categoria_id FK "NULL -> categorias.id"
+    }
+
+    metas {
+        bigint id PK "AUTO_INCREMENT"
+        varchar_255 descricao "NOT NULL"
+        decimal_15_2 valor "NOT NULL"
+        bigint usuario_id FK "NOT NULL -> usuarios.id"
+    }
+
+    chat_mensagens {
+        bigint id PK "AUTO_INCREMENT"
+        enum papel "NOT NULL: USUARIO | IA"
+        varchar_4000 texto "NOT NULL"
+        datetime_6 criada_em "NOT NULL"
+        bigint usuario_id FK "NOT NULL -> usuarios.id"
+    }

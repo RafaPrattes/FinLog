@@ -8,7 +8,7 @@ Guia passo a passo para configurar e rodar o projeto do zero na sua máquina —
 |---|---|---|
 | **Git** | Baixar o código do repositório | https://git-scm.com/downloads |
 | **Docker Desktop** | Roda o backend e o banco de dados MySQL automaticamente, sem precisar instalar Java nem MySQL na sua máquina | https://www.docker.com/products/docker-desktop |
-| **Node.js** (versão 22.12 ou mais recente) | Roda o frontend (a tela do sistema) | https://nodejs.org |
+| **Node.js** (versão 24.15+ recomendada; ou 22.22.2+ na linha 22) | Roda o frontend (a tela do sistema) | https://nodejs.org |
 
 Depois de instalar, confirme que deu certo abrindo um terminal (PowerShell, no Windows) e rodando:
 
@@ -30,16 +30,18 @@ git clone https://github.com/RafaPrattes/FinLog.git
 cd FinLog
 ```
 
-Depois de clonar, você deve ver duas pastas principais: `finlog-backend` e `finlog-frontend`.
+Depois de clonar, você deve ver as pastas `docs`, `api` e `web` (documentação, backend e frontend).
 
 ## 3. Configurar o backend (arquivo `.env`)
 
 O backend precisa de um arquivo `.env` com suas configurações locais (senhas do banco, porta, chave da IA). Esse arquivo **não vem pronto no repositório** de propósito — cada pessoa cria o seu.
 
 ```powershell
-cd finlog-backend
+cd api
 copy .env.example .env
 ```
+
+(No Git Bash, Linux ou macOS, use `cp .env.example .env`.)
 
 Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com valores padrão que funcionam sem precisar mudar nada, **exceto duas linhas**:
 
@@ -48,7 +50,7 @@ Abra o arquivo `.env` recém-criado em qualquer editor de texto. Ele já vem com
   ```powershell
   [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
   ```
-  e cole o resultado no lugar do valor de exemplo.
+  (no Git Bash, Linux ou macOS: `openssl rand -base64 48`) e cole o resultado no lugar do valor de exemplo.
 
 Se quiser, pode revisar/ajustar os outros valores (útil só se alguma porta já estiver em uso na sua máquina):
 
@@ -68,6 +70,7 @@ JPA_DDL_AUTO=update
 JPA_SHOW_SQL=false
 APP_AUTH_TOKEN_SECRET=change-me-to-a-long-random-secret
 APP_AUTH_TOKEN_EXPIRATION_SECONDS=3600
+APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
 
 **Importante:** o seu `.env` é só seu — não precisa (e não deve) ser igual ao de outra pessoa da equipe, e não deve ser enviado pra ninguém nem commitado no Git (ele já está protegido pelo `.gitignore`).
@@ -86,11 +89,11 @@ O Assistente de IA do FinLog usa a API Gemini do Google. É gratuita e leva meno
    GEMINI_API_KEY=cole_sua_chave_aqui
    ```
 
-Sem essa chave, o sistema todo funciona normalmente (login, lançamentos, categorias) — só a aba **Assistente IA** não vai responder.
+Sem essa chave, o sistema todo funciona normalmente (login, lançamentos, categorias) — só a aba **IA Conselheira** (o assistente de IA) não vai responder.
 
 ## 5. Subir o backend e o banco de dados (Docker)
 
-Ainda dentro da pasta `finlog-backend`:
+Ainda dentro da pasta `api`:
 
 ```powershell
 docker compose up --build
@@ -113,7 +116,7 @@ docker compose down
 Abra **um novo terminal** (deixe o do Docker rodando no outro) e vá até a pasta do frontend:
 
 ```powershell
-cd finlog-frontend
+cd web
 npm install
 npm run dev
 ```
@@ -127,19 +130,19 @@ Com os dois terminais rodando (Docker no primeiro, `npm run dev` no segundo):
 1. Abra http://localhost:5173 no navegador.
 2. Crie uma conta e faça login.
 3. Cadastre uma receita ou despesa.
-4. Confira o Dashboard e teste o Assistente IA (se já tiver colocado sua chave da Gemini).
+4. Confira a Página Inicial e teste a IA Conselheira (se já tiver colocado sua chave da Gemini).
 
 ## Problemas comuns
 
 **`no configuration file provided: not found`**
-Você rodou `docker compose` fora da pasta `finlog-backend`. O arquivo `docker-compose.yml` fica dentro dela — sempre rode o comando de lá (`cd finlog-backend` primeiro).
+Você rodou `docker compose` fora da pasta `api`. O arquivo `docker-compose.yml` fica dentro dela — sempre rode o comando de lá (`cd api` primeiro).
 
 **Porta já em uso (erro ao subir o Docker)**
 Alguma outra coisa na sua máquina já está usando a porta 8080 (backend). Troque `FINLOG_BACKEND_PORT` no seu `.env` para outro número livre (ex: `8081`) e rode `docker compose up --build` de novo. O banco MySQL não é publicado no seu computador por padrão (só o backend acessa); se quiser conectar um cliente SQL, descomente o bloco `ports` do `mysql-db` no `docker-compose.yml` e use `MYSQL_PORT`.
-> Se mudar `FINLOG_BACKEND_PORT`, avise o frontend: dentro de `finlog-frontend`, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL` (ex: `VITE_API_URL=http://localhost:8081/api`). Depois reinicie o `npm run dev`.
+> Se mudar `FINLOG_BACKEND_PORT`, avise o frontend: dentro de `web`, copie `.env.example` para `.env.local` e ajuste `VITE_API_URL` (ex: `VITE_API_URL=http://localhost:8081/api`). Depois reinicie o `npm run dev`.
 
-**Assistente IA não responde**
-Confire se preencheu `GEMINI_API_KEY` no `.env` com uma chave válida (veja passo 4), e se o backend foi reiniciado depois de editar o `.env` (`docker compose down` + `docker compose up --build`).
+**IA Conselheira não responde**
+Confira se preencheu `GEMINI_API_KEY` no `.env` com uma chave válida (veja passo 4), e se o backend foi reiniciado depois de editar o `.env` (`docker compose down` + `docker compose up --build`).
 
 **"docker: command not found" ou Docker não abre**
 O Docker Desktop precisa estar instalado *e aberto* (rodando em segundo plano) antes de usar os comandos `docker compose`.

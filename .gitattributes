@@ -1,0 +1,11 @@
+# Arquivos binários: nunca converter quebras de linha
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.webm binary
+*.ttf binary
+*.zip binary
